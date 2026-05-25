@@ -26,19 +26,137 @@ body {
 
 #root {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
 }
 
 .page-shell {
-  width: min(1100px, 100%);
+  width: 100%;
+  min-height: 100vh;
   background: var(--panel);
-  border: 1px solid rgba(15, 22, 43, 0.08);
+  border: none;
   backdrop-filter: blur(8px);
-  border-radius: 24px;
-  padding: clamp(20px, 3vw, 34px);
-  box-shadow: 0 20px 60px rgba(15, 22, 43, 0.14);
+  border-radius: 0;
+  padding: clamp(16px, 2vw, 24px);
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.sidebar {
+  border-radius: 18px;
+  border: 1px solid rgba(15, 22, 43, 0.1);
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.95), rgba(246, 250, 255, 0.94));
+  padding: 18px;
+  overflow: auto;
+}
+
+.sidebar-title {
+  margin: 8px 0 16px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.4rem;
+}
+
+.menu-vertical {
+  display: grid;
+  gap: 10px;
+}
+
+.menu-group {
+  border: 1px solid rgba(10, 16, 32, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.menu-parent {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.menu-parent strong {
+  display: block;
+  font-size: 1rem;
+  font-family: "Space Grotesk", sans-serif;
+  margin-bottom: 4px;
+}
+
+.menu-parent small {
+  display: block;
+  color: rgba(10, 16, 32, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.menu-parent.is-active {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.caret {
+  color: rgba(10, 16, 32, 0.6);
+  transform: rotate(-90deg);
+  transition: transform 180ms ease;
+}
+
+.caret.is-open {
+  transform: rotate(0deg);
+}
+
+.submenu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.submenu-link {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(10, 16, 32, 0.08);
+  background: #f9fbff;
+  border-radius: 10px;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.submenu-link span {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 3px;
+}
+
+.submenu-link small {
+  display: block;
+  color: rgba(10, 16, 32, 0.62);
+  font-size: 0.75rem;
+}
+
+.submenu-link.is-selected {
+  border-color: color-mix(in oklab, var(--blue) 70%, white 30%);
+  background: color-mix(in oklab, var(--blue) 10%, white 90%);
+}
+
+.content-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(10, 16, 32, 0.08);
+  background: #fff;
+  padding: clamp(18px, 2.5vw, 28px);
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  overflow: auto;
 }
 
 .header-panel {
@@ -63,112 +181,63 @@ h1 {
 
 .subtitle {
   margin: 0;
-  max-width: 60ch;
+  max-width: 70ch;
   color: rgba(10, 16, 32, 0.8);
 }
 
-.main-menu {
-  margin-top: 24px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.menu-card {
-  text-align: left;
-  border: 1px solid rgba(15, 22, 43, 0.08);
-  background: #fff;
+.submenu-page {
+  border: 1px solid rgba(10, 16, 32, 0.08);
   border-radius: 16px;
-  padding: 14px;
-  cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  padding: 16px;
+  background: linear-gradient(165deg, #ffffff, #fbfdff);
 }
 
-.menu-card:hover,
-.menu-card:focus-visible {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(31, 94, 255, 0.12);
-  border-color: var(--accent);
-  outline: none;
+.submenu-page-header {
+  margin-bottom: 14px;
 }
 
-.menu-card.is-active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 65%, white 35%);
+.submenu-page-parent {
+  display: inline-block;
+  margin-bottom: 8px;
+  border: 1px solid rgba(15, 22, 43, 0.18);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.menu-title {
-  display: block;
+.submenu-page-header h2 {
+  margin: 0 0 8px;
   font-family: "Space Grotesk", sans-serif;
-  font-size: 1.05rem;
-  margin-bottom: 6px;
 }
 
-.menu-summary {
-  display: block;
-  font-size: 0.92rem;
+.submenu-page-header p {
+  margin: 0;
   color: rgba(10, 16, 32, 0.76);
 }
 
-.submenu-panel {
-  margin-top: 22px;
-  background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid rgba(10, 16, 32, 0.07);
-  padding: 18px;
-  animation: rise 550ms ease;
+.submenu-page-body {
+  border-top: 1px solid rgba(10, 16, 32, 0.08);
+  padding-top: 14px;
 }
 
-.submenu-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.submenu-header h2 {
-  margin: 0;
+.submenu-page-body h3 {
+  margin: 0 0 8px;
   font-family: "Space Grotesk", sans-serif;
 }
 
-.submenu-badge {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 22, 43, 0.2);
-  padding: 6px 10px;
-  color: rgba(15, 22, 43, 0.72);
+.submenu-page-body p {
+  margin: 0 0 14px;
 }
 
-.submenu-grid {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.submenu-item {
-  border-radius: 14px;
-  border: 1px solid rgba(15, 22, 43, 0.08);
-  background: linear-gradient(145deg, #fff 0%, #f8faff 100%);
-  padding: 14px;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: slideIn 420ms ease forwards;
-}
-
-.submenu-item h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-}
-
-.submenu-item p {
+.submenu-page-body ul {
   margin: 0;
-  font-size: 0.92rem;
-  color: rgba(10, 16, 32, 0.75);
+  padding-left: 18px;
+}
+
+.submenu-page-body li {
+  margin-bottom: 8px;
 }
 
 @keyframes rise {
@@ -190,12 +259,21 @@ h1 {
 }
 
 @media (max-width: 900px) {
-  .main-menu,
-  .submenu-grid {
+  #root {
+    padding: 0;
+  }
+
+  .page-shell {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .page-shell {
     border-radius: 18px;
+  }
+
+  .sidebar,
+  .content-panel {
+    overflow: visible;
   }
 }

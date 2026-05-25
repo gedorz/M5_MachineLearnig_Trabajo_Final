@@ -1,10 +1,13 @@
+from endpoints.endpoints import init_fastapi, router
+from fastapi import FastAPI
+
 import logging
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from endpoints.endpoints import init_fastapi, router
-from dataBaseManagement.dbManagement import init_db
+from DataBaseManagement.dbConectionPostgres import init_db
 
 # IS done: Modifica la configuración de logging para que los mensajes de error de validación se registren con un nivel de advertencia (warning) en lugar de error (error). Esto permitirá que los errores de validación se destaquen sin interrumpir el flujo normal del programa.
 # define la fecha y hora en el formato deseado, por ejemplo: "2024-06-01 12:00:00"
@@ -54,7 +57,7 @@ async def request_validation_exception_handler(_request, exc: RequestValidationE
 	)
 
 # IS done: Agrega un endpoint adicional para exponer el esquema OpenAPI 
-# de la API en la ruta "/api/openapi.json". 
+# de la API en la ruta "/apim5/openapi.json". 
 # Esto permitirá que los clientes y herramientas de desarrollo 
 # puedan acceder fácilmente a la documentación de la API y 
 # al esquema de validación de solicitudes.
