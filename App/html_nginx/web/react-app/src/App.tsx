@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import ImportarDatosPage from "./pages/importarDatos";
+import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
 type SubmenuItem = {
@@ -16,6 +17,15 @@ type MenuSection = {
   summary: string;
   submenu: SubmenuItem[];
 };
+
+type ActiveDataset = {
+  datasetId: number;
+  versionId: number;
+  versionNumber: number;
+  filename: string;
+};
+
+const ACTIVE_DATASET_STORAGE_KEY = "m5_active_dataset";
 
 const menuSections: MenuSection[] = [
   {
@@ -130,6 +140,27 @@ export default function App() {
 
   const [expandedSections, setExpandedSections] = useState<string[]>([firstSection.id]);
   const [activeSubmenuId, setActiveSubmenuId] = useState(firstSubmenu.id);
+  const [activeDataset, setActiveDataset] = useState<ActiveDataset | null>(() => {
+  const storedDataset = localStorage.getItem(ACTIVE_DATASET_STORAGE_KEY);
+  if (!storedDataset) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedDataset) as ActiveDataset;
+  } catch {
+    return null;
+  }
+  });
+
+  useEffect(() => {
+  if (!activeDataset) {
+    localStorage.removeItem(ACTIVE_DATASET_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(ACTIVE_DATASET_STORAGE_KEY, JSON.stringify(activeDataset));
+  }, [activeDataset]);
 
   const activeContext = useMemo(() => {
     for (const section of menuSections) {
@@ -160,6 +191,24 @@ export default function App() {
     if (!expandedSections.includes(sectionId)) {
       setExpandedSections((currentSections) => [...currentSections, sectionId]);
     }
+  };
+
+  const handleDatasetLoaded = (dataset: ActiveDataset) => {
+    setActiveDataset(dataset);
+  };
+
+  const handleDatasetVersionChange = (datasetId: number, versionId: number, versionNumber: number) => {
+    setActiveDataset((currentDataset) => {
+      if (!currentDataset || currentDataset.datasetId !== datasetId) {
+        return currentDataset;
+      }
+
+      return {
+        ...currentDataset,
+        versionId,
+        versionNumber
+      };
+    });
   };
 
   return (
@@ -220,7 +269,12 @@ export default function App() {
         </header>
 
         {activeContext.submenu.id === "importar-csv-excel" ? (
-          <ImportarDatosPage />
+          <ImportarDatosPage onDatasetLoaded={handleDatasetLoaded} />
+        ) : activeContext.submenu.id === "preprocesamiento-balanceo" ? (
+          <ProcesamientoBalanceoPage
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
         ) : (
           <SubmenuPage
             parentTitle={activeContext.section.title}
