@@ -61,16 +61,16 @@ def _connect_with_retries(host: str, port: int, db_name: str, user: str, passwor
 def get_postgres_connection():
     host = _get_env("POSTGRES_HOST", "DB_POSTGRESDB_HOST", default="postgres")
     port = int(_get_env("POSTGRES_PORT", "DB_POSTGRESDB_PORT", default="5432"))
-    db_name = _get_env("POSTGRES_DB_NAME", "DB_POSTGRESDB_DATABASE", default="dbtaskmanager")
-    user = _get_env("POSTGRES_USER_NAME", "DB_POSTGRESDB_USER", default="taskmanageruser")
+    db_name = _get_env("POSTGRES_DB_NAME", "DB_POSTGRESDB_DATABASE", default="dbPredicterManager")
+    user = _get_env("POSTGRES_USER_NAME", "DB_POSTGRESDB_USER", default="taskpredictoruser")
     password = _get_env("POSTGRES_PASSWORD_VALUE", "DB_POSTGRESDB_PASSWORD", default="Qazwsx12")
     return _connect_with_retries(host, port, db_name, user, password)
 
 def get_postgres_connection_server(host:str):
     host = _get_env("POSTGRES_HOST", "DB_POSTGRESDB_HOST", default=host)
     port = int(_get_env("POSTGRES_PORT", "DB_POSTGRESDB_PORT", default="5432"))
-    db_name = _get_env("POSTGRES_DB_NAME", "DB_POSTGRESDB_DATABASE", default="dbtaskmanager")
-    user = _get_env("POSTGRES_USER_NAME", "DB_POSTGRESDB_USER", default="taskmanageruser")
+    db_name = _get_env("POSTGRES_DB_NAME", "DB_POSTGRESDB_DATABASE", default="dbPredicterManager")
+    user = _get_env("POSTGRES_USER_NAME", "DB_POSTGRESDB_USER", default="taskpredictoruser")
     password = _get_env("POSTGRES_PASSWORD_VALUE", "DB_POSTGRESDB_PASSWORD", default="Qazwsx12")
     return _connect_with_retries(host, port, db_name, user, password)
 

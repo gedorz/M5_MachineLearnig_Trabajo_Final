@@ -1,0 +1,83 @@
+services:
+    nginx:
+        image: nginx:alpine
+        container_name: nginx_proxy_m5
+        command: >
+            /bin/sh -c "
+            if ! command -v npm >/dev/null 2>&1; then apk add --no-cache nodejs npm; fi;
+            cd /usr/share/nginx/html/react-app;
+            rm -rf node_modules;
+            npm ci --include=optional || npm install --include=optional;
+            npm install --no-save @rollup/rollup-linux-x64-musl || true;
+            npm run build -- --watch &
+            exec nginx -g 'daemon off;'
+            "
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+            - CHOKIDAR_USEPOLLING=true
+            - CHOKIDAR_INTERVAL=500
+        ports:
+            - "80:80"
+        volumes:
+            - ../html_nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ../html_nginx/web:/usr/share/nginx/html
+            - nginx_config_m5:/etc/nginx/conf.d
+        depends_on:
+            - apicontainerm5
+        restart: unless-stopped
+        networks: [web]
+    apicontainerm5:
+        build: ../api-server
+        container_name: fastapi_m5
+        depends_on:
+            postgresm5:
+                condition: service_healthy
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+            - DB_POSTGRESDB_HOST=${DB_POSTGRESDB_HOST}
+            - DB_POSTGRESDB_PORT=${DB_POSTGRESDB_PORT}
+            - DB_POSTGRESDB_DATABASE=${DB_POSTGRESDB_DATABASE}
+            - DB_POSTGRESDB_USER=${DB_POSTGRESDB_USER}
+            - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD}
+        ports:
+            - "0.0.0.0:8080:8000"
+        volumes:
+            - ../api-server/api:/app
+            - api_data_m5:/app/data
+        command: uvicorn main:app --host 0.0.0.0 --port 8000 --root-path=/apim5 --reload    
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        restart: unless-stopped
+        networks: [web]
+    postgresm5:
+        image: postgres:15-alpine
+        container_name: dbserverpostgres_m5
+        restart: unless-stopped
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
+        volumes:
+            - postgres_data_m5:/var/lib/postgresql/data
+            - ${LOCAL_FILES_SCRIPT}:/docker-entrypoint-initdb.d
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 12
+            start_period: 5s
+        ports:
+            - "5432:5432"
+        networks: [web]
+networks:
+  web:
+    driver: bridge
+volumes:
+  nginx_data_m5:
+  nginx_config_m5:
+  postgres_data_m5:
+  api_data_m5:

@@ -1,3 +1,28 @@
+## Creación de un entorno virtual en Python 
+
+### 1. Is done: Crear entorno virtual
+    Se crea un entorno virtual de Python para la creación de la API de FastAPI
+    y su base de datos mediante la postgres
+    Se hizo mediante los siguientes comandos.
+```bash
+    # Windows
+    python -m venv .venv
+    .venv\Scripts\activate
+
+    # Linux/Mac
+    python -m venv .venv
+    source .\.venv\Scripts\activate.ps1   
+```
+
+### 2. Is done:  Instalar dependencias
+    Mediante el archivo de  requirements.txt
+    se realizar la inclusión de los requerimientos de la aplicación.
+    Esto se realiza con el siguiente comando
+
+```bash
+    pip install -r requirements.txt
+
+
 # Esquemas de Entrenamiento
 
 df_calories_lite = pd.read_csv(PATH_DATASET_CALORIES_LITE)
