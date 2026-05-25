@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import ImportarDatosPage from "./pages/importarDatos";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
 type SubmenuItem = {
@@ -218,12 +219,16 @@ export default function App() {
           </p>
         </header>
 
-        <SubmenuPage
-          parentTitle={activeContext.section.title}
-          submenuTitle={activeContext.submenu.label}
-          description={activeContext.submenu.description}
-          content={selectedPageContent}
-        />
+        {activeContext.submenu.id === "importar-csv-excel" ? (
+          <ImportarDatosPage />
+        ) : (
+          <SubmenuPage
+            parentTitle={activeContext.section.title}
+            submenuTitle={activeContext.submenu.label}
+            description={activeContext.submenu.description}
+            content={selectedPageContent}
+          />
+        )}
       </main>
     </div>
   );
