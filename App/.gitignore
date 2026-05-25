@@ -1,0 +1,16 @@
+#Ignore los archivos log
+*.log
+#Ignora directorio pycache
+pycache/
+
+#Ignorar los achivos de cache 
+__pycache__/
+
+#Ignorar los achivos ambiente virtual python si es intalado en windows 
+venv/
+
+#Ignorar los achivos ambiente virtual python si es intalado en linux o mac
+.venv/
+
+
+
