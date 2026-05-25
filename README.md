@@ -126,7 +126,7 @@ proyecto-final-ML/
 │           
 ├── APP/                                   # Datos usados en el proyecto
 │   ├── api-server/                          # Api de servicio para el proceso y entrenamiento de dato
-│   └── dockerFiles/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
+│   └── dockerFiles_m5/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
 │   └── html_nginx/                          # Pagina web para cargar los datos activar el reentrenamiento y
 │   │   └── web                              # mostrar los resultados de los modelos y predicciones. 
 │   │       └── feature_importance.html  

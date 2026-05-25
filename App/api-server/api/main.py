@@ -58,7 +58,7 @@ async def request_validation_exception_handler(_request, exc: RequestValidationE
 # Esto permitirá que los clientes y herramientas de desarrollo 
 # puedan acceder fácilmente a la documentación de la API y 
 # al esquema de validación de solicitudes.
-@app.get("/apiup/openapi.json", include_in_schema=False)
+@app.get("/apim5/openapi.json", include_in_schema=False)
 def openapi_proxy_alias():
 	return app.openapi()
 

@@ -34,7 +34,6 @@ def init_fastapi():
                 description=description,
                 version="1.0.5",
                 contact={
-                    "url": "",
                     "name": "Creador: Diego Gil & German Dario Realpe Zambrano",
                     "email": "gedorz@gmail.com",
                 })
