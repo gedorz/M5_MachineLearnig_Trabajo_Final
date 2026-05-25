@@ -1,9 +1,11 @@
 
 from fastapi import FastAPI, APIRouter
 from .endpointsTasks import router as task_router
+from .endpointsCargaDatos import router as cargadatos_router
     
 router = APIRouter()
 router.include_router(task_router)
+router.include_router(cargadatos_router)
 
 def init_fastapi():
     description = """
