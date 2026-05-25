@@ -1,17 +1,78 @@
-# Evaluación Final - Dataset
+# Proyecto Final - Dataset Machine learnig y Deep Learning.
 
-- **Autor:** Diego Gil & German Dario Realpe
-- **Contacto:** pontia@sergiobenito.com
-- **Última actualización:** 24/05/2025
+    - **Autor:** Diego Gil & German Dario Realpe
+    - **Contacto:** pontia@sergiobenito.com
+    - **Última actualización:** 24/05/2025
+
+# Objetivo del la App de Machine learnig y Deep Learning M5.
+    Diseñar e implementar un sistema automático que: 
+    - Entrene, evalúe y compare distintos modelos de clasificación binaria. 
+    - Seleccione el mejor modelo según una métrica principal, además de ofrecer una visión de otra secundarias. 
+    - Automatice el flujo completo desde los datos hasta la inferencia. 
+    - Se propone adjunto el dataset que se utilizará para llevar a cabo el proyecto.
+    - Usar las funciones metodos y algoridmos planteadas en \notebooks\exploracion\TestPractica.ipynb
+
+
+# Requisitos mínimos del sistema.
+
+## 1 Problema de clasificación binaria 
+    - Dataset real proporcionado en el apartado previo, con una variable objetivo binaria (0 o 1). 
+    - Justificación del problema y del conjunto de datos
+
+## 2 Modelos a implementar y comparar
+    Se deben entrenar al menos los siguientes algoritmos, además de otros que puedan ser de interés: 
+    - Regresión logística 
+    - Árbol de decisión 
+    - Random Forest 
+    - Gradient Boosting (XGBoost, LightGBM o CatBoost) 
+    - Red neuronal multicapa usando Keras de TensorFlow
+## 3. Evaluación de modelos 
+    - Utilizar al menos una de las siguientes métricas como principal: accuracy, precision, recall, F1-score, AUC-ROC. 
+    - Se debe justificar el por qué se ha elegido dicha métrica como principal. 
+    - Mostrar: matriz de confusión y curva ROC.
+
+## 4. Automatización del flujo
+    - Implementar un pipeline estructurado para: carga de datos, preprocesamiento, entrenamiento, evaluación, y selección del mejor modelo.
+
+## 5 Crea una api con fasApi con el siguiente objetivo
+    - Crear una API REST para exponer endpoints como /train, /predict o /evaluate.
+    - Embeddings personalizados: Uso de Word2Vec, TF-IDF o embeddings categoricos para representar variables complejas.
+    - Optimización de hiperparámetros: Aplicación de GridSearchCV o RandomizedSearchCV.
+    - Balanceo de clases: Aplicacion de técnicas como: SMOTE, undersampling, class_weight.
+    - Interpretabilidad: Uso de SHAP, LIME, o feature_importances_.
+    - Interfaz visual: web UI simple.    
+    - La app debe cargar la informacion del CSV y entrenar el modelo.
+    - Se debe implementar 5 modelos distintos:(regresión logística, árbol, bosques aleatorios, boosting, red neuronal)
+    - los modelos y los compare usando un enfoque metodológico coherente
+    - Crear un endpoint para para optener una prediccion de cancelaciones para los siguientes 7,15 y 30 dias.
+    - Acorde a los datos del proporcionados y al modelo entrenado, hace la predición si el usuario cancelará o no la reserva.
+    - Separación de funcionalidades en distintos módulos o scripts (dconfig.py,data_loader.py  ,model_trainer.py,evaluator.py ,predictor.py).  
+    - Script principal (trainer.py) que lanza todo el flujo de trabajo. 
+    - Uso de funciones o clases reutilizables. 
+    - Pipeline de Scikit-learn bien estructurado.
+
+## 6 Resultados en el Frontend
+    - Debe mostrar los resultados de los datos de las predicciones por cada modelo
+    - Comparar modelos usando un conjunto de métricas comunes
+    - Mostrar resultados en una tabla similar a la siguiente:
+    - la pagina se debe llamar features_informance.html
+    - debe mostrara las graficas de: 
+
+| Modelo                  | Accuracy | F1-score  | ROC-AUC | 
+| ------------------------| -------- | --------  | ------- |
+| Logistic Regression     |   0,88   | 0,85      | 0,91    |
+| Decision Tree           |   0,89   | 0,83      | 0,92    |
+| Random Fores            |   0,91   | 0,89      | 0,94    |
+| XGBoost                 |   0,92   | 0,90      | 0,95    |
+| Deep Neural             |   0,89   | 0,87      | 0,93    |
+| Network (Keras)         |          |           |         |
 
 
 
+# Explicacion de los datos a trabajar
 Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede ser predecir si una reserva será cancelada
 
-
-
-
-## Variables de datos
+## Variables de datos en csv .\data\raw\dataset_practica_final.csv
 
 | Nombre Variable                  | Descripción                                              |
 | -------------------------------- | -------------------------------------------------------- |
@@ -48,138 +109,66 @@ Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede
 | `reservation_status`             | Estado final de la reserva: Check-Out, Canceled, No-Show |
 | `reservation_status_date`        | Fecha en que se actualizó el estado                      |
 
+## 
 
+# Proyecto Final ML
 
-
-
-
-
-# Esquemas de Entrenamiento
-
-df_calories_lite = pd.read_csv(PATH_DATASET_CALORIES_LITE)
-# 1) Preparación de los datos para el modelo de regresión lineal
-X  = df_calories_lite[["time"]]
-y = df_calories_lite["calories"]
-# Creación del modelo de regresión lineal
-modelo = LinearRegression()
-modelo.fit(X, y)
-
-# Validaciones de datos
-df_calories.isna().sum()   
-df_calories.columns = df_calories.columns.str.lower()
-
-# Coeficientes del modelo
-# modelo.coef_, modelo.intercept_
-coeficiente = modelo.coef_[0]
-intercepto = modelo.intercept_
-
-print(f"La fórmula de la regresión lineal es: y = {coeficiente:.4f} * x + {intercepto:.4f}")
-print(f"O lo que es lo mismo: calories = {coeficiente:.4f} * time + {intercepto:.4f}")
-
-minutos_entrenamiento = 30
-calorias_estimadas = coeficiente * minutos_entrenamiento + intercepto
-print(f"Calorías estimadas para {minutos_entrenamiento} minutos de entrenamiento: {calorias_estimadas:.2f} calorías")  
-# Realizamos predicciones con el modelo
-y_pred = modelo.predict(X)
+Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ---
-# 2) Modelo y proyeccion
-# Cargar datos de entrenamiento
-df_calories = pd.read_csv(PATH_DATASET_CALORIES)
 
-# Prepara un data set y para entrenar
-# Preparación de los datos para el modelo de regresión lineal
-variable_dependiente = "calorias"
-X = df_calories.drop(columns=[variable_dependiente])
-y = df_calories[variable_dependiente]
+## Estructura del proyecto Dataset Machine learnig y Deep Learning
 
-# Coeficientes del modelo y entrenamiento del modelo
-modelo_regresion_multiple = LinearRegression()
-modelo_regresion_multiple.fit(X, y)
-coeficientes = modelo_regresion_multiple.coef_
-intercepto = modelo_regresion_multiple.intercept_
-
-for i, col in enumerate(X.columns):
-    print(f"Coeficiente para {col}: {coeficientes[i]:.4f}")
-
-# Evaluar el modelo
-y_pred = modelo_boston.predict(X)
-_, _, _, _ = calcular_metricas_evaluacion(y_pred, y)
-
-
-
-# Evalucion del modelo en grado 2 para ajustar el modelo y evaluarlo
-# 80% en entrenamiento y 20%de text
-## Cargamos las variables independiente y dependiente
-X = df_boston_rg_processado[["RM"]]
-y = df_boston_rg_processado["MEDV"]
-
-## Hacemos el train y  test haciendo split del conjunto de datos
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=45)
-
-## Eleva a la 2 el set de entrenamiento y lo convierte en un array [x, x^2]
-poly2 = PolynomialFeatures(degree=2, include_bias=False)
-
-X_train_poly2 = poly2.fit_transform(X_train) 
-X_test_poly2 = poly2.transform(X_test)
-
-modelo_ajustado2 = LinearRegression()
-modelo_ajustado2.fit(X_train_poly2, y_train)
-y_pred_poly2 = modelo_ajustado2.predict(X_test_poly2)
-
-# Calculamos las métricas de evaluación para el conjunto de prueba
-_, _, _, _ = calcular_metricas_evaluacion(y_pred_poly2, y_test)
-
-
-# Gracias de analisis
-sns.pairplot(data=df_calories)
-plot_matriz_correlacion(df_calories, "calorias")
-plot_residuos(y_pred=y_pred, y_true=y)
-plot_histograma_residuos(y_pred=y_pred, y_true=y)
-plot_qq_plot_residuos(y_pred=y_pred, y_true=y)
-sns.pairplot(data=df_boston_processado)
-sns.pairplot(data=df_boston_processado[["CRIM", "MEDV"]])
-
----
-# 3) Entrenamiento de modelo
-X_train, X_test, y_train, y_test =  train_test_split(X, y, test_size=0.2, random_state=42)
-variable_dependiente = "MEDV"
-X = df_boston.drop(columns=[variable_dependiente])    
-y = df_boston[variable_dependiente]
-modelo_boston = LinearRegression()
-modelo_boston.fit(X_train, y_train)
-
-
-## 1. Creación de un modelo de regresión logística para clasificación
-
-data_iris = load_iris(as_frame=True, return_X_y=False)
-df_iris = data_iris['data']
-lista_columnas_independientes = data_iris['data'].columns
-
-target_column = 'target'
-data_iris[target_column]
-df_iris[target_column] = data_iris[target_column]
-df_iris[target_column] = df_iris[target_column].astype(str)
-df_iris.rename(columns=lambda x: x.replace(' (cm)', '').replace(' ', '_'), inplace=True)
-
-## Analisis
-df_iris.head()
-df_iris.info()
-df_iris.describe().transpose()
-df_iris.describe(include='object').transpose()
-df_iris[target_column].value_counts()   # Ver frecuencias absolutas de la columna 
-df_iris[target_column].value_counts(normalize=True) # Ver frecuencias relativas
-
-## Visualización de las variables numéricas con un gráfico de dispersión distinguiendo por la clase
-sns.scatterplot(data=df_iris, x='sepal_length', y='sepal_width', hue=target_column, palette='viridis')
-plt.title('Gráfico de dispersión de Sepal Length vs Sepal Width')
-plt.xlabel('Sepal Length (cm)')
-plt.ylabel('Sepal Width (cm)')
-plt.grid(True)
-plt.show()  
-
-sns.pairplot(df_iris, hue=target_column, palette='viridis') 
-plt.show()
-
-
-## Creación del modelo LogisticRegression
+```bash
+proyecto-final-ML/
+│
+├── .gitignore                              # Archivos que no se suben al repo (e.g., modelos, datos temporales)
+│           
+├── APP/                                   # Datos usados en el proyecto
+│   ├── api-server/                          # Api de servicio para el proceso y entrenamiento de dato
+│   └── dockerFiles/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
+│   └── html_nginx/                          # Pagina web para cargar los datos activar el reentrenamiento y
+│   │   └── web                              # mostrar los resultados de los modelos y predicciones. 
+│   │       └── feature_importance.html  
+│   │      
+├── data/                                   # Datos usados en el proyecto
+│   ├── raw/                                # Datos originales sin procesar
+│   └── processed/                          # Datos tras limpieza y transformación (listos para modelar)
+│           
+├── docs/                                   # Documentación adicional
+│           
+├── models/                                 # Modelos entrenados (guardados con joblib o pickle)
+│   ├── tests/                              # (Opcional) Modelos intermedios de prueba
+│   │   ├── logistic_regression.pkl         # Ejemplo: Modelo de Regresión Logística
+│   │   ├── tree.pkl                        # Ejemplo: Modelo de Árbol de Decisión
+│   │   ├── random_forest.pkl               # Ejemplo: Modelo Random Forest
+│   │   ├── xgboost.pkl                     # Ejemplo: Modelo XGBoost
+│   │   ├── lightgbm.pkl                    # Ejemplo: Modelo LightGBM
+│   │   └── neural_network.pkl              # Ejemplo: Red Neuronal
+│   │
+│   └── best_model.pkl                      # El mejor modelo seleccionado para producción
+│
+├── notebooks/                              # Todos los notebooks del proyecto
+│   ├── exploracion/                        # Notebooks de pruebas, EDA inicial, prototipos
+│   │   ├── eda_inicial.ipynb               # Ejemplo: análisis inicial del dataset
+│   │   └── pruebas_modelos.ipynb           # Ejemplo: pruebas de diferentes modelos
+│   │
+│   └── finales/                            # Notebooks finales con resultados o presentación
+│       ├── eda_final.ipynb                 # Ejemplo: EDA final del dataset
+│       └── comparativa_modelos.ipynb       # Ejemplo: comparación final de modelos usada para scripts
+│
+├── outputs/                                # Gráficos, reportes y resultados generados
+│   ├── confusion_matrix.png
+│   └── feature_importance.html
+│
+├── src/                                    # Código fuente del proyecto
+│   ├── __init__.py                         # Inicializador del paquete src
+│   ├── config.py                           # Parámetros y configuración del proyecto
+│   ├── data_loader.py                      # Funciones para cargar y transformar datos
+│   ├── model_trainer.py                    # Clases o funciones para entrenar modelos
+│   ├── evaluator.py                        # Métricas y visualización de resultados
+│   └── predictor.py                        # Funciones para hacer predicciones con modelos entrenados
+│           
+├── requirements.txt                        # Dependencias del proyecto
+│           
+└── README.md                               # Documentación principal del proyecto con comandos de ejecución

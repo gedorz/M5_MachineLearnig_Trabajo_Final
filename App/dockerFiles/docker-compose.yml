@@ -1,0 +1,66 @@
+services:
+    nginx:
+        image: nginx:alpine
+        container_name: nginx_proxy_m5
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+        ports:
+            - "80:80"
+        volumes:
+            - ../html_nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ../html_nginx/web:/usr/share/nginx/html
+            - nginx_config:/etc/nginx/conf.d
+        depends_on:
+            - apicontainer
+        restart: unless-stopped
+        networks: [web]
+    postgres:
+        image: postgres:15-alpine
+        container_name: dbserverpostgres_m5
+        restart: unless-stopped
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ${LOCAL_FILES_SCRIPT}:/docker-entrypoint-initdb.d
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 12
+            start_period: 5s
+        ports:
+            - "5432:5432"
+        networks: [web]
+    apicontainer:
+        build: ../api-server
+        container_name: fastapi_m5
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            - TZ=${TZ}
+            - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+        ports:
+            - "0.0.0.0:8080:8000"
+        volumes:
+            - ../api-server/api:/app
+            - api_data:/app/data
+        command: uvicorn main:app --host 0.0.0.0 --port 8000 --root-path=/apiup --reload    
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        restart: unless-stopped
+        networks: [web]
+networks:
+  web:
+    driver: bridge
+volumes:
+  nginx_data:
+  nginx_config:
+  postgres_data:
+  api_data:
