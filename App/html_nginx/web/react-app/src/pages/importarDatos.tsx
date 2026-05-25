@@ -3,15 +3,37 @@ import type { ChangeEvent } from "react";
 
 type CsvRow = Record<string, unknown>;
 
+type DatasetVersion = {
+	id: number;
+	dataset_id: number;
+	version_number: number;
+	storage_path: string;
+};
+
+type DatasetRecord = {
+	id: number;
+	original_filename: string;
+};
+
 type CsvResponse = {
-	filename: string;
+	dataset: DatasetRecord;
+	version: DatasetVersion;
 	head: CsvRow[];
 	tail: CsvRow[];
 	columns: string[];
 	info: string;
 };
 
-const API_URL = "/apim5/cargadatoscsv";
+type ImportarDatosPageProps = {
+	onDatasetLoaded?: (dataset: {
+		datasetId: number;
+		versionId: number;
+		versionNumber: number;
+		filename: string;
+	}) => void;
+};
+
+const API_URL = "/apim5/datasets/upload";
 
 function renderCellValue(value: unknown) {
 	if (value === null || value === undefined) {
@@ -59,7 +81,7 @@ function CsvTable({ title, rows, columns }: { title: string; rows: CsvRow[]; col
 	);
 }
 
-export default function ImportarDatosPage() {
+export default function ImportarDatosPage({ onDatasetLoaded }: ImportarDatosPageProps) {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
@@ -100,6 +122,12 @@ export default function ImportarDatosPage() {
 			}
 
 			setResponseData(payload);
+			onDatasetLoaded?.({
+				datasetId: payload.dataset.id,
+				versionId: payload.version.id,
+				versionNumber: payload.version.version_number,
+				filename: payload.dataset.original_filename
+			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Error desconocido al cargar el CSV.";
 			setErrorMessage(message);
@@ -138,13 +166,18 @@ export default function ImportarDatosPage() {
 						<p>
 							<strong>Endpoint:</strong> {API_URL}
 						</p>
+						{responseData && (
+							<p>
+								<strong>Dataset activo:</strong> #{responseData.dataset.id} v{responseData.version.version_number}
+							</p>
+						)}
 					</div>
 
 					{errorMessage && <div className="csv-alert csv-alert--error">{errorMessage}</div>}
 
 					{responseData && (
 						<div className="csv-alert csv-alert--success">
-							Archivo procesado correctamente: {responseData.filename}
+							Archivo procesado correctamente: {responseData.dataset.original_filename}
 						</div>
 					)}
 				</div>
