@@ -69,7 +69,7 @@
 
 
 
-# Explicacion de los datos a trabajar
+# 7 Explicacion de los datos a trabajar
 Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede ser predecir si una reserva será cancelada
 
 ## Variables de datos en csv .\data\raw\dataset_practica_final.csv
@@ -111,13 +111,13 @@ Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede
 
 ## 
 
-# Proyecto Final ML
+# 8 Proyecto Final ML
 
 Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ---
 
-## Estructura del proyecto Dataset Machine learnig y Deep Learning
+## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning
 
 ```bash
 proyecto-final-ML/
