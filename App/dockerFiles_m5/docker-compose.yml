@@ -9,7 +9,7 @@ services:
             rm -rf node_modules;
             npm ci --include=optional || npm install --include=optional;
             npm install --no-save @rollup/rollup-linux-x64-musl || true;
-            npm run build -- --watch &
+            npm run build;
             exec nginx -g 'daemon off;'
             "
         environment:

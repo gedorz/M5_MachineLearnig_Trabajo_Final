@@ -1,3 +1,4 @@
+import React from "react";
 import type { SubmenuPageContent } from "./submenuPageContent";
 
 type SubmenuPageProps = {

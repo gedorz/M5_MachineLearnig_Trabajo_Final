@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import ImportarDatosPage from "./pages/importarDatos";
 import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
