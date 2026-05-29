@@ -9,8 +9,8 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from psycopg2.extras import Json
 
-from DataBaseManagement.dbConectionPostgres import get_db_tasks
-from DataBaseManagement.dbManagement import (
+from dataBaseManagement.dbConectionPostgres import get_db_tasks
+from dataBaseManagement.dbManagement import (
     get_record_by_id_Generic,
     get_rows_by_condition_Generic,
     insert_record_Generic,
