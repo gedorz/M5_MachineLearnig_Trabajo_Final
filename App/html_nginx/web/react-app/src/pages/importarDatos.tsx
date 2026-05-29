@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 type CsvRow = Record<string, unknown>;

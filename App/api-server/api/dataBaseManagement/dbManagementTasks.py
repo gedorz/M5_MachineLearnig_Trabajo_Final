@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from DataBaseManagement.dbManagement import (get_rows_by_condition_Generic,
+from dataBaseManagement.dbManagement import (get_rows_by_condition_Generic,
                                              insert_record_Generic, 
                                              update_record_Generic,
                                              delete_record_Generic, 
