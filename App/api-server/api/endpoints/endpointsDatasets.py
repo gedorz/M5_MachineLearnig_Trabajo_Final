@@ -1,12 +1,14 @@
 import io
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
 from psycopg2.extras import Json
 
 from dataBaseManagement.dbConectionPostgres import get_db_tasks
@@ -287,6 +289,79 @@ def preview_latest_dataset_version(dataset_id: int, db=Depends(get_db_tasks)):
     except ValueError as exc:
         logger.warning("event=dataset_preview_latest_not_found dataset_id=%s detail=%s", dataset_id, str(exc))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+class TrainRequest(BaseModel):
+    dataset_id: int
+    version_id: int | None = None
+    test_size: float = Field(default=0.2, ge=0.05, le=0.5)
+    random_state: int = 42
+    primary_metric: str = Field(default="roc_auc")
+
+
+@router.post("/train")
+def train_dataset(request: TrainRequest, db=Depends(get_db_tasks)):
+    logger.info(
+        "event=train_start dataset_id=%s version_id=%s test_size=%s random_state=%s primary_metric=%s",
+        request.dataset_id,
+        request.version_id,
+        request.test_size,
+        request.random_state,
+        request.primary_metric,
+    )
+
+    try:
+        manager = DatasetServicesManager(db)
+        version = (
+            manager._get_latest_version(request.dataset_id)
+            if request.version_id is None
+            else manager._get_version(request.dataset_id, request.version_id)
+        )
+
+        dataset_path = Path(version["storage_path"])
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"El archivo del dataset no existe: {dataset_path}")
+
+        df_reservas = pd.read_csv(dataset_path)
+
+        ## En contenedor: /src está montado con los módulos Python
+        ## sys.path.insert lo hace disponible para importación
+        if "/src" not in sys.path:
+            sys.path.insert(0, "/src")
+
+        ###from model_trainer import train_models
+
+        sys.path.insert(0, '/')  # Agrega la raíz al path
+
+        from src.model_trainer import train_models
+
+        results = train_models(
+            df_reservas,
+            test_size=request.test_size,
+            random_state=request.random_state,
+            primary_metric=request.primary_metric,
+        )
+
+        return {
+            "dataset_id": request.dataset_id,
+            "version_id": version["id"],
+            "storage_path": str(dataset_path),
+            "train_results": results,
+        }
+    except ValueError as exc:
+        logger.warning(
+            "event=train_dataset_not_found dataset_id=%s version_id=%s detail=%s",
+            request.dataset_id,
+            request.version_id,
+            str(exc),
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except FileNotFoundError as exc:
+        logger.warning("event=train_dataset_file_not_found detail=%s", str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        logger.exception("event=train_error dataset_id=%s version_id=%s", request.dataset_id, request.version_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.get("/datasets/{dataset_id}/versions/{version_id}/preview")
