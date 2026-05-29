@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from endpoints.endpoints import init_fastapi, router
-from DataBaseManagement.dbConectionPostgres import init_db
+from dataBaseManagement.dbConectionPostgres import init_db
 
 # IS done: Modifica la configuración de logging para que los mensajes de error de validación se registren con un nivel de advertencia (warning) en lugar de error (error). Esto permitirá que los errores de validación se destaquen sin interrumpir el flujo normal del programa.
 # define la fecha y hora en el formato deseado, por ejemplo: "2024-06-01 12:00:00"
