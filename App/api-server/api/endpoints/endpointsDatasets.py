@@ -22,7 +22,11 @@ logger = logging.getLogger("api.endpointsDatasets")
 DATASET_TABLE = "datasets"
 DATASET_VERSION_TABLE = "dataset_versions"
 DATASET_OPERATION_TABLE = "dataset_operations"
-DATASET_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "data" / "datasets"
+
+# Ruta raíz para almacenar los archivos CSV originales y las versiones procesadas de los datasets. 
+# Cada dataset tendrá su propia carpeta identificada por su dataset_id dentro de esta ruta raíz,
+#  y cada versión del dataset se almacenará como un archivo CSV separado dentro de esa carpeta.
+DATASET_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "data" / "datasets" 
 
 
 class DatasetServicesManager:
@@ -89,9 +93,13 @@ class DatasetServicesManager:
     def create_dataset_from_csv(self, filename: str, content: bytes) -> dict[str, Any]:
         self._ensure_storage_dirs()
 
+        # Carga el CSV en un DataFrame de pandas
         df_reservas = pd.read_csv(io.BytesIO(content))
         storage_key = uuid4().hex
 
+        # Lo Registra en base de datos y lo guarda en el sistema de archivos, creando la versión inicial del dataset (v1)
+        # Inserta el registro del dataset y la versión en la base de datos, 
+        # y guarda el archivo en el sistema de archivos
         dataset_row = insert_record_Generic(
             DATASET_TABLE,
             {
@@ -102,6 +110,8 @@ class DatasetServicesManager:
             connection=self.db,
         )
 
+        # Guarda el archivo CSV original en la carpeta de almacenamiento raw 
+        # con un nombre único basado en el dataset_id y storage_key para evitar colisiones.
         dataset_id = int(dataset_row["id"])
         raw_path = DATASET_STORAGE_ROOT / "raw" / f"dataset_{dataset_id}_{storage_key}.csv"
         raw_path.write_bytes(content)
@@ -109,6 +119,8 @@ class DatasetServicesManager:
         version_path = self._build_version_path(dataset_id, 1)
         df_reservas.to_csv(version_path, index=False)
 
+        # Registra la versión del dataset en la base de datos, incluyendo metadata 
+        # como el número de filas, columnas y los nombres de las columnas.
         version_row = insert_record_Generic(
             DATASET_VERSION_TABLE,
             {
@@ -123,6 +135,7 @@ class DatasetServicesManager:
             connection=self.db,
         )
 
+        # Registra la operación de carga del CSV en la base de datos, asociándola con la versión del dataset.
         insert_record_Generic(
             DATASET_OPERATION_TABLE,
             {
@@ -187,6 +200,9 @@ class DatasetServicesManager:
         new_version_path = self._build_version_path(dataset_id, next_version_number)
         df_reservas.to_csv(new_version_path, index=False)
 
+        # Guarda la nueva versión del dataset con las columnas en minúscula, 
+        # registrando la operación en la base de datos y asociándola con la versión original 
+        # como su "parent_version_id" para mantener el historial de transformaciones.
         version_row = insert_record_Generic(
             DATASET_VERSION_TABLE,
             {
@@ -201,6 +217,8 @@ class DatasetServicesManager:
             connection=self.db,
         )
 
+        # Registra la operación de transformación (lowercase_columns) en la base de datos, 
+        # asociándola con la nueva versión del dataset y con la versión original como su padre.
         insert_record_Generic(
             DATASET_OPERATION_TABLE,
             {
