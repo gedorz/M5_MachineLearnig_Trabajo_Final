@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import ImportarDatosPage from "./pages/importarDatos";
+import PrevisualizarLotePage from "./pages/Previsualizarlote";
 import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
@@ -270,6 +271,11 @@ export default function App() {
 
         {activeContext.submenu.id === "importar-csv-excel" ? (
           <ImportarDatosPage onDatasetLoaded={handleDatasetLoaded} />
+        ) : activeContext.submenu.id === "previsualizar-lote" ? (
+          <PrevisualizarLotePage
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
         ) : activeContext.submenu.id === "preprocesamiento-balanceo" ? (
           <ProcesamientoBalanceoPage
             activeDataset={activeDataset}
