@@ -3,11 +3,13 @@ from fastapi import FastAPI, APIRouter
 from .endpointsTasks import router as task_router
 from .endpointsCargaDatos import router as cargadatos_router
 from .endpointsDatasets import router as datasets_router
+from .endpointsDatasetsViewer import router as datasets_viewer_router
     
 router = APIRouter()
 router.include_router(task_router)
 router.include_router(cargadatos_router)
 router.include_router(datasets_router)
+router.include_router(datasets_viewer_router)
 
 def init_fastapi():
     description = """
@@ -32,7 +34,7 @@ def init_fastapi():
     """
     app = FastAPI(title="Prediccion de cancelacion de reservas API",
                 description=description,
-                version="1.0.5",
+                version="1.0.7",
                 contact={
                     "name": "Creador: Diego Gil & German Dario Realpe Zambrano",
                     "email": "gedorz@gmail.com",

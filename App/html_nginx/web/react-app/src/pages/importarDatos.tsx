@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import type { ChangeEvent } from "react";
+import CsvTable from "./components/CsvTable";
 
 type CsvRow = Record<string, unknown>;
 
@@ -34,52 +35,6 @@ type ImportarDatosPageProps = {
 };
 
 const API_URL = "/apim5/datasets/upload";
-
-function renderCellValue(value: unknown) {
-	if (value === null || value === undefined) {
-		return "";
-	}
-
-	if (typeof value === "object") {
-		return JSON.stringify(value);
-	}
-
-	return String(value);
-}
-
-function CsvTable({ title, rows, columns }: { title: string; rows: CsvRow[]; columns: string[] }) {
-	const visibleColumns = useMemo(() => columns.filter(Boolean), [columns]);
-
-	return (
-		<section className="csv-table-card">
-			<div className="csv-table-card__header">
-				<h3>{title}</h3>
-				<span>{rows.length} filas</span>
-			</div>
-
-			<div className="csv-table-wrap">
-				<table className="csv-table">
-					<thead>
-						<tr>
-							{visibleColumns.map((column) => (
-								<th key={column}>{column}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row, rowIndex) => (
-							<tr key={`${title}-${rowIndex}`}>
-								{visibleColumns.map((column) => (
-									<td key={column}>{renderCellValue(row[column])}</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-		</section>
-	);
-}
 
 export default function ImportarDatosPage({ onDatasetLoaded }: ImportarDatosPageProps) {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -142,7 +97,7 @@ export default function ImportarDatosPage({ onDatasetLoaded }: ImportarDatosPage
 				<span className="submenu-page-parent">Menu: Cargar data</span>
 				<h2 id="csv-upload-title">Importar CSV / Excel</h2>
 				<p>
-					Carga un archivo CSV al endpoint <strong>/cargadatoscsv</strong> y revisa la respuesta JSON con vista previa.
+					Carga un archivo CSV al endpoint <strong>/datasets/upload</strong> y revisa la respuesta JSON con vista previa.
 				</p>
 			</div>
 
