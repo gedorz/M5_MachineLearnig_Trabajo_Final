@@ -25,6 +25,7 @@ logger = logging.getLogger("api.endpointsDatasets")
 DATASET_TABLE = "datasets"
 DATASET_VERSION_TABLE = "dataset_versions"
 DATASET_OPERATION_TABLE = "dataset_operations"
+MAX_TRANSPOSE_PREVIEW_ROWS = 200 # Limita el número de filas para el preview de la tabla transpuesta, evitando respuestas gigantes en datasets grandes.
 
 # Ruta raíz para almacenar los archivos CSV originales y las versiones procesadas de los datasets. 
 # Cada dataset tendrá su propia carpeta identificada por su dataset_id dentro de esta ruta raíz,
@@ -47,6 +48,24 @@ class DatasetServicesManager:
         version_dir = self._dataset_version_dir(dataset_id)
         version_dir.mkdir(parents=True, exist_ok=True)
         return version_dir / f"v{version_number:04d}.csv"
+
+    def _serialize_table(
+        self,
+        dataframe: pd.DataFrame,
+        include_index: bool = False,
+        index_column_name: str = "index",
+    ) -> dict[str, Any]:
+        cleaned_df = dataframe.replace([float("inf"), float("-inf")], None)
+        if include_index:
+            cleaned_df = cleaned_df.reset_index().rename(columns={"index": index_column_name})
+
+        return {
+            "columns": [str(column) for column in cleaned_df.columns.tolist()],
+            "rows": json.loads(cleaned_df.to_json(orient="records")),
+        }
+
+    def _get_dataframe(self, version: dict[str, Any]) -> pd.DataFrame:
+        return pd.read_csv(Path(version["storage_path"]))
 
     def _preview_dataframe(self, df_reservas: pd.DataFrame) -> dict[str, Any]:
         head_data = json.loads(df_reservas.head().replace([float("inf"), float("-inf")], None).to_json(orient="records"))
@@ -92,6 +111,52 @@ class DatasetServicesManager:
             [dataset_id],
             connection=self.db,
         )
+
+    def get_versions(self, dataset_id: int) -> list[dict[str, Any]]:
+        self._get_dataset(dataset_id)
+        return self._get_versions(dataset_id)
+
+    def get_dataframe_by_version(
+        self,
+        dataset_id: int,
+        version_id: int | None = None,
+    ) -> tuple[pd.DataFrame, dict[str, Any]]:
+        version = self._get_latest_version(dataset_id) if version_id is None else self._get_version(dataset_id, version_id)
+        return self._get_dataframe(version), version
+
+    def get_version_data_info(self, dataset_id: int, version_id: int | None = None) -> dict[str, Any]:
+        df_reservas, version = self.get_dataframe_by_version(dataset_id, version_id)
+
+        info_buffer = io.StringIO()
+        df_reservas.info(buf=info_buffer)
+
+        # Compatibilidad entre versiones de pandas: datetime_is_numeric no existe en todas.
+        try:
+            describe_df = df_reservas.describe(include="all", datetime_is_numeric=True)
+        except TypeError:
+            describe_df = df_reservas.describe(include="all")
+
+        describe_df = describe_df.replace([float("inf"), float("-inf")], None)
+        describe_transpose_df = describe_df.transpose()
+
+        # Evita respuestas gigantes: transpose completo en datasets grandes puede colgar Swagger/UI.
+        transpose_source = df_reservas.iloc[:MAX_TRANSPOSE_PREVIEW_ROWS]
+        transpose_df = transpose_source.transpose()
+
+        return {
+            "dataset_id": dataset_id,
+            "version": version,
+            "shape": [int(df_reservas.shape[0]), int(df_reservas.shape[1])],
+            "columns": [str(column) for column in df_reservas.columns.tolist()],
+            "info": info_buffer.getvalue(),
+            "head": self._serialize_table(df_reservas.head(), include_index=True, index_column_name="Index"),
+            "tail": self._serialize_table(df_reservas.tail(), include_index=True, index_column_name="Index"),
+            "transpose": self._serialize_table(transpose_df, include_index=True, index_column_name="Column"),
+            "transpose_preview_rows": int(transpose_source.shape[0]),
+            "transpose_total_rows": int(df_reservas.shape[0]),
+            "describe": self._serialize_table(describe_df, include_index=True, index_column_name="stadistic"),
+            "describe_transpose": self._serialize_table(describe_transpose_df, include_index=True, index_column_name="Column"),
+        }
 
     def create_dataset_from_csv(self, filename: str, content: bytes) -> dict[str, Any]:
         self._ensure_storage_dirs()
@@ -175,8 +240,7 @@ class DatasetServicesManager:
         }
 
     def preview_version(self, dataset_id: int, version_id: int | None = None) -> dict[str, Any]:
-        version = self._get_latest_version(dataset_id) if version_id is None else self._get_version(dataset_id, version_id)
-        df_reservas = pd.read_csv(Path(version["storage_path"]))
+        df_reservas, version = self.get_dataframe_by_version(dataset_id, version_id)
         return {
             "dataset_id": dataset_id,
             "version": version,
@@ -184,8 +248,7 @@ class DatasetServicesManager:
         }
 
     def null_summary(self, dataset_id: int, version_id: int | None = None) -> dict[str, Any]:
-        version = self._get_latest_version(dataset_id) if version_id is None else self._get_version(dataset_id, version_id)
-        df_reservas = pd.read_csv(Path(version["storage_path"]))
+        df_reservas, version = self.get_dataframe_by_version(dataset_id, version_id)
         summary = df_reservas.isna().sum().to_dict()
         return {
             "dataset_id": dataset_id,
@@ -195,8 +258,7 @@ class DatasetServicesManager:
         }
 
     def lowercase_columns(self, dataset_id: int, version_id: int | None = None) -> dict[str, Any]:
-        base_version = self._get_latest_version(dataset_id) if version_id is None else self._get_version(dataset_id, version_id)
-        df_reservas = pd.read_csv(Path(base_version["storage_path"]))
+        df_reservas, base_version = self.get_dataframe_by_version(dataset_id, version_id)
         df_reservas.columns = df_reservas.columns.astype(str).str.lower()
 
         next_version_number = int(base_version["version_number"]) + 1
