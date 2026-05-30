@@ -17,6 +17,7 @@ from sklearn.metrics import (
     precision_recall_curve
 )
 
+from sklearn.model_selection import train_test_split
 from config import MODELS_DIR, OUTPUTS_DIR
 
 
