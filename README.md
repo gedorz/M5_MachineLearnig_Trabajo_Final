@@ -172,3 +172,6 @@ proyecto-final-ML/
 ├── requirements.txt                        # Dependencias del proyecto
 │           
 └── README.md                               # Documentación principal del proyecto con comandos de ejecución
+
+
+.
