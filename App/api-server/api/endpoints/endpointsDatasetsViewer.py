@@ -91,6 +91,15 @@ def _prepare_boxplot_columns(df_reservas: pd.DataFrame, columns: list[str]) -> l
 	return columns
 
 
+def _require_columns(df_reservas: pd.DataFrame, columns: list[str], detail_prefix: str) -> None:
+	missing_columns = [column for column in columns if column not in df_reservas.columns]
+	if missing_columns:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=f"{detail_prefix}: {', '.join(missing_columns)}.",
+		)
+
+
 def _create_outliers_boxplots_figure(df_reservas: pd.DataFrame, columns: list[str]) -> plt.Figure:
 	figure, axes = plt.subplots(len(columns), 1, figsize=(10, 4 * len(columns)))
 	axes_list = [axes] if len(columns) == 1 else list(axes)
@@ -152,6 +161,137 @@ def _prepare_pairplot_dataframe(df_reservas):
 		reduced_df = reduced_df.sample(n=max_rows, random_state=42)
 
 	return reduced_df
+
+
+def _create_cancelaciones_por_hotel_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	_require_columns(
+		df_reservas,
+		["hotel", "is_canceled"],
+		"Faltan columnas requeridas para la gráfica de cancelaciones por tipo de hotel",
+	)
+
+	figure, axis = plt.subplots(figsize=(10, 6))
+	sns.countplot(data=df_reservas, x="hotel", hue="is_canceled", ax=axis)
+	axis.set_title("Cancelaciones por tipo de hotel")
+	axis.set_xlabel("Hotel")
+	axis.set_ylabel("Frecuencia")
+	axis.legend(title="Is Canceled")
+	return figure
+
+
+def _create_cancelaciones_por_mes_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	_require_columns(
+		df_reservas,
+		["arrival_date_month", "is_canceled"],
+		"Faltan columnas requeridas para la gráfica de cancelaciones por mes",
+	)
+
+	month_order = [
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	]
+
+	plot_df = df_reservas[["arrival_date_month", "is_canceled"]].copy()
+	plot_df["arrival_date_month"] = pd.Categorical(
+		plot_df["arrival_date_month"],
+		categories=month_order,
+		ordered=True,
+	)
+	cancel_by_month = plot_df.groupby("arrival_date_month", observed=False)["is_canceled"].mean() * 100
+
+	figure, axis = plt.subplots(figsize=(12, 5))
+	cancel_by_month.plot(kind="bar", ax=axis)
+	axis.set_title("% Cancelaciones por mes")
+	axis.set_xlabel("Mes")
+	axis.set_ylabel("Tasa de cancelación (%)")
+	axis.tick_params(axis="x", rotation=45)
+	return figure
+
+
+def _create_lead_time_distribution_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	_require_columns(
+		df_reservas,
+		["lead_time", "is_canceled"],
+		"Faltan columnas requeridas para la gráfica de distribución de lead time",
+	)
+
+	figure, axes = plt.subplots(1, 2, figsize=(12, 5))
+	sns.histplot(data=df_reservas, x="lead_time", hue="is_canceled", bins=50, ax=axes[0])
+	axes[0].set_title("Lead Time por estado")
+	axes[0].set_xlabel("Lead Time")
+	axes[0].set_ylabel("Frecuencia")
+
+	sns.boxplot(data=df_reservas, x="is_canceled", y="lead_time", ax=axes[1])
+	axes[1].set_title("Lead Time vs Cancelación")
+	axes[1].set_xlabel("Is Canceled")
+	axes[1].set_ylabel("Lead Time")
+	return figure
+
+
+def _create_adr_por_hotel_cancelacion_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	_require_columns(
+		df_reservas,
+		["hotel", "adr", "is_canceled"],
+		"Faltan columnas requeridas para la gráfica ADR por tipo de hotel y cancelación",
+	)
+
+	plot_df = df_reservas[["hotel", "adr", "is_canceled"]].copy()
+	plot_df["adr"] = pd.to_numeric(plot_df["adr"], errors="coerce")
+	plot_df = plot_df.dropna(subset=["adr"])
+
+	if plot_df.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No hay datos numéricos válidos en la columna 'adr' para generar la gráfica.",
+		)
+
+	figure, axis = plt.subplots(figsize=(10, 6))
+	sns.boxplot(data=plot_df, x="hotel", y="adr", hue="is_canceled", ax=axis)
+	axis.set_title("ADR por hotel y cancelación")
+	axis.set_xlabel("Hotel")
+	axis.set_ylabel("ADR")
+	axis.set_ylim(0, 500)
+	axis.legend(title="Is Canceled")
+	return figure
+
+
+def _create_correlation_heatmap_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	numeric_df = df_reservas.select_dtypes(include=["int64", "float64"])
+	if numeric_df.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No hay columnas numéricas disponibles para generar la matriz de correlación.",
+		)
+
+	if "is_canceled" not in numeric_df.columns:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="La columna 'is_canceled' no existe o no es numérica en esta versión del dataset.",
+		)
+
+	corr_matrix = numeric_df.corr()
+	if corr_matrix.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No se pudo calcular la matriz de correlación para esta versión del dataset.",
+		)
+
+	_ = corr_matrix["is_canceled"].sort_values(ascending=False)
+
+	figure, axis = plt.subplots(figsize=(14, 10))
+	sns.heatmap(corr_matrix, annot=False, cmap="coolwarm", center=0, ax=axis)
+	axis.set_title("Matriz de Correlación")
+	return figure
 
 
 @router.get("/datasets-viewer/{dataset_id}/versions")
@@ -331,3 +471,68 @@ def dataset_nulls_heatmap(dataset_id: int, version_id: int, db=Depends(get_db_ta
 	nulls_axis.set_title("Mapa de valores nulos")
 
 	return _build_plot_response(dataset_id, version, nulls_figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-hotel")
+def dataset_cancelaciones_por_hotel(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_cancelaciones_por_hotel_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_cancelaciones_por_hotel_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-mes")
+def dataset_cancelaciones_por_mes(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_cancelaciones_por_mes_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_cancelaciones_por_mes_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/lead-time-distribution")
+def dataset_lead_time_distribution(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_lead_time_distribution_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_lead_time_distribution_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/adr-por-hotel-cancelacion")
+def dataset_adr_por_hotel_cancelacion(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_adr_por_hotel_cancelacion_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_adr_por_hotel_cancelacion_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/correlacion-variable-objetivo")
+def dataset_correlacion_variable_objetivo(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_correlacion_variable_objetivo_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_correlation_heatmap_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
