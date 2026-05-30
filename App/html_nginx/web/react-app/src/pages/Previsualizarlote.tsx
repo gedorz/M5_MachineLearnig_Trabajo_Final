@@ -23,11 +23,18 @@ type DataInfoResponse = {
 	describe_transpose: TablePayload;
 };
 
-type DistributionResponse = {
-	plots: {
-		histplot_adr: string;
-		histplot_adr_kde: string;
-	};
+type SinglePlotResponse = {
+	plot: string;
+};
+
+type VisualizationsResponse = {
+	histplotAdr: string;
+	histplotAdrKde: string;
+	pairplot: string;
+	nullsHeatmap: string;
+	cancelationsDistribution: string;
+	numericHistograms: string;
+	outlierBoxplots: string;
 };
 
 type ApiErrorResponse = {
@@ -55,7 +62,7 @@ type PrevisualizarLoteProps = {
 export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionChange }: PrevisualizarLoteProps) {
 	const [selectedTab, setSelectedTab] = useState<"data-info" | "visualizacion">("data-info");
 	const [dataInfo, setDataInfo] = useState<DataInfoResponse | null>(null);
-	const [distribution, setDistribution] = useState<DistributionResponse | null>(null);
+	const [visualizations, setVisualizations] = useState<VisualizationsResponse | null>(null);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [isLoadingData, setIsLoadingData] = useState(false);
 
@@ -71,7 +78,7 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 	useEffect(() => {
 		if (!activeDataset || !selectedVersionId) {
 			setDataInfo(null);
-			setDistribution(null);
+			setVisualizations(null);
 			return;
 		}
 
@@ -80,14 +87,45 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 			setErrorMessage("");
 
 			try {
-				const [infoResponse, plotsResponse] = await Promise.all([
+				const warnings: string[] = [];
+				const [
+					infoResponse,
+					histResponse,
+					kdeResponse,
+					pairplotResponse,
+					nullsResponse,
+					cancelationsResponse,
+					numericHistogramsResponse,
+					boxplotsResponse,
+				] = await Promise.all([
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/data-info`),
-					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/distribution`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histplot-adr`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histplot-adr-kde`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/pairplot`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/nulls-heatmap`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/distribution-cancelaciones`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histogramas-numericos`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/boxplots-outliers`),
 				]);
 
-				const [infoPayload, plotsPayload] = await Promise.all([
+				const [
+					infoPayload,
+					histPayload,
+					kdePayload,
+					pairplotPayload,
+					nullsPayload,
+					cancelationsPayload,
+					numericHistogramsPayload,
+					boxplotsPayload,
+				] = await Promise.all([
 					parseJsonSafely<DataInfoResponse & ApiErrorResponse>(infoResponse),
-					parseJsonSafely<DistributionResponse & ApiErrorResponse>(plotsResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(histResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(kdeResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(pairplotResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(nullsResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(numericHistogramsResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(boxplotsResponse),
 				]);
 
 				if (!infoResponse.ok) {
@@ -96,18 +134,61 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					);
 				}
 
-				if (!plotsResponse.ok) {
-					throw new Error(
-						plotsPayload?.detail ?? `No se pudieron cargar las gráficas de distribución (HTTP ${plotsResponse.status}).`
+				if (!infoPayload) {
+					throw new Error("La API devolvió una respuesta inválida para la información principal del dataset.");
+				}
+
+				if (!histResponse.ok) {
+					warnings.push(histPayload?.detail ?? `No se pudo cargar la gráfica Histograma ADR (HTTP ${histResponse.status}).`);
+				}
+
+				if (!kdeResponse.ok) {
+					warnings.push(kdePayload?.detail ?? `No se pudo cargar la gráfica Histograma ADR con KDE (HTTP ${kdeResponse.status}).`);
+				}
+
+				if (!pairplotResponse.ok) {
+					warnings.push(
+						pairplotPayload?.detail ??
+							`No se pudo cargar la gráfica Visualización de como se relacionan las variables (HTTP ${pairplotResponse.status}).`
 					);
 				}
 
-				if (!infoPayload || !plotsPayload) {
-					throw new Error("La API devolvió una respuesta inválida para la versión seleccionada.");
+				if (!nullsResponse.ok) {
+					warnings.push(nullsPayload?.detail ?? `No se pudo cargar la gráfica Visualizar nulos (HTTP ${nullsResponse.status}).`);
+				}
+
+				if (!cancelationsResponse.ok) {
+					warnings.push(
+						cancelationsPayload?.detail ??
+							`No se pudo cargar la gráfica Distribución de cancelaciones (HTTP ${cancelationsResponse.status}).`
+					);
+				}
+
+				if (!numericHistogramsResponse.ok) {
+					warnings.push(
+						numericHistogramsPayload?.detail ??
+							`No se pudo cargar la gráfica Seleccionar numéricas Histogramas (HTTP ${numericHistogramsResponse.status}).`
+					);
+				}
+
+				if (!boxplotsResponse.ok) {
+					warnings.push(
+						boxplotsPayload?.detail ??
+							`No se pudo cargar la gráfica Boxplots para detectar outliers (HTTP ${boxplotsResponse.status}).`
+					);
 				}
 
 				setDataInfo(infoPayload);
-				setDistribution(plotsPayload);
+				setVisualizations({
+					histplotAdr: histResponse.ok && histPayload?.plot ? histPayload.plot : "",
+					histplotAdrKde: kdeResponse.ok && kdePayload?.plot ? kdePayload.plot : "",
+					pairplot: pairplotResponse.ok && pairplotPayload?.plot ? pairplotPayload.plot : "",
+					nullsHeatmap: nullsResponse.ok && nullsPayload?.plot ? nullsPayload.plot : "",
+					cancelationsDistribution: cancelationsResponse.ok && cancelationsPayload?.plot ? cancelationsPayload.plot : "",
+					numericHistograms: numericHistogramsResponse.ok && numericHistogramsPayload?.plot ? numericHistogramsPayload.plot : "",
+					outlierBoxplots: boxplotsResponse.ok && boxplotsPayload?.plot ? boxplotsPayload.plot : "",
+				});
+				setErrorMessage(warnings.join(" "));
 
 				if (infoPayload.version.id !== activeDataset.versionId) {
 					onDatasetVersionChange?.(
@@ -119,6 +200,7 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Error desconocido al cargar la previsualización.";
 				setErrorMessage(message);
+				setVisualizations(null);
 			} finally {
 				setIsLoadingData(false);
 			}
@@ -203,7 +285,10 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 
 				{isLoadingData ? (
 					<section className="csv-info-card">
-						<p>Cargando datos de la versión seleccionada...</p>
+						<div className="csv-loading-state" role="status" aria-live="polite" aria-busy="true">
+							<span className="csv-loading-spinner" aria-hidden="true" />
+							<p>Cargando datos de la versión seleccionada...</p>
+						</div>
 					</section>
 				) : selectedTab === "data-info" ? (
 					<div className="csv-results">
@@ -249,10 +334,10 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					<div className="csv-results">
 						<section className="csv-info-card">
 							<h3>Visualización de la distribución de variables usando seaborn</h3>
-							{distribution?.plots.histplot_adr ? (
+							{visualizations?.histplotAdr ? (
 								<img
 									className="csv-plot-image"
-									src={`data:image/png;base64,${distribution.plots.histplot_adr}`}
+									src={`data:image/png;base64,${visualizations.histplotAdr}`}
 									alt="Histograma ADR"
 								/>
 							) : (
@@ -262,11 +347,76 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 
 						<section className="csv-info-card">
 							<h3>Visualización de la distribución con función de densidad</h3>
-							{distribution?.plots.histplot_adr_kde ? (
+							{visualizations?.histplotAdrKde ? (
 								<img
 									className="csv-plot-image"
-									src={`data:image/png;base64,${distribution.plots.histplot_adr_kde}`}
+									src={`data:image/png;base64,${visualizations.histplotAdrKde}`}
 									alt="Histograma ADR con KDE"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Visualización de como se relacionan las variables</h3>
+							{visualizations?.pairplot ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.pairplot}`}
+									alt="Pairplot de variables"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Distribución de cancelaciones</h3>
+							{visualizations?.cancelationsDistribution ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.cancelationsDistribution}`}
+									alt="Distribución de cancelaciones"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Seleccionar numéricas Histogramas</h3>
+							{visualizations?.numericHistograms ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.numericHistograms}`}
+									alt="Histogramas de variables numéricas"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Boxplots para detectar outliers</h3>
+							{visualizations?.outlierBoxplots ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.outlierBoxplots}`}
+									alt="Boxplots para detectar outliers"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Visualizar nulos</h3>
+							{visualizations?.nullsHeatmap ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.nullsHeatmap}`}
+									alt="Mapa de valores nulos"
 								/>
 							) : (
 								<p>No hay gráfica disponible para esta versión.</p>
