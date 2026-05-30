@@ -1,12 +1,15 @@
 import io
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pandas as pd
+import joblib
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
 from psycopg2.extras import Json
 
 from dataBaseManagement.dbConectionPostgres import get_db_tasks
@@ -350,6 +353,313 @@ def preview_latest_dataset_version(dataset_id: int, db=Depends(get_db_tasks)):
         logger.warning("event=dataset_preview_latest_not_found dataset_id=%s detail=%s", dataset_id, str(exc))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
+
+class TrainRequest(BaseModel):
+    dataset_id: int
+    version_id: int | None = None
+    test_size: float = Field(default=0.2, ge=0.05, le=0.5)
+    random_state: int = 42
+    primary_metric: str = Field(default="roc_auc")
+
+
+@router.post("/train")
+def train_dataset(request: TrainRequest, db=Depends(get_db_tasks)):
+    logger.info(
+        "event=train_start dataset_id=%s version_id=%s test_size=%s random_state=%s primary_metric=%s",
+        request.dataset_id,
+        request.version_id,
+        request.test_size,
+        request.random_state,
+        request.primary_metric,
+    )
+
+    try:
+        manager = DatasetServicesManager(db)
+        version = (
+            manager._get_latest_version(request.dataset_id)
+            if request.version_id is None
+            else manager._get_version(request.dataset_id, request.version_id)
+        )
+
+        dataset_path = Path(version["storage_path"])
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"El archivo del dataset no existe: {dataset_path}")
+
+        df_reservas = pd.read_csv(dataset_path)
+
+        ## En contenedor: /src está montado con los módulos Python
+        ## sys.path.insert lo hace disponible para importación
+        if "/src" not in sys.path:
+            sys.path.insert(0, "/src")
+
+        ###from model_trainer import train_models
+
+        sys.path.insert(0, '/')  # Agrega la raíz al path
+
+        from src.model_trainer import train_models
+
+        results = train_models(
+            df_reservas,
+            test_size=request.test_size,
+            random_state=request.random_state,
+            primary_metric=request.primary_metric,
+        )
+
+        return {
+            "dataset_id": request.dataset_id,
+            "version_id": version["id"],
+            "storage_path": str(dataset_path),
+            "train_results": results,
+        }
+    except ValueError as exc:
+        logger.warning(
+            "event=train_dataset_not_found dataset_id=%s version_id=%s detail=%s",
+            request.dataset_id,
+            request.version_id,
+            str(exc),
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except FileNotFoundError as exc:
+        logger.warning("event=train_dataset_file_not_found detail=%s", str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        logger.exception("event=train_error dataset_id=%s version_id=%s", request.dataset_id, request.version_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+class EvaluateRequest(BaseModel):
+    """Request para evaluación de modelos."""
+    dataset_id: int = Field(..., description="ID del dataset a evaluar")
+    version_id: int = Field(None, description="Versión específica (opcional, usa última si no se especifica)")
+    model_name: str = Field(None, description="Nombre del modelo específico a evaluar (ej: XGBoost, RandomForest). Si es None, evalúa todos")
+    test_size: float = Field(0.2, description="Proporción para test", ge=0.1, le=0.5)
+    random_state: int = Field(42, description="Semilla aleatoria")
+    primary_metric: str = Field("roc_auc", description="Métrica principal para ordenar resultados")
+
+
+class EvaluateResponse(BaseModel):
+    """Respuesta de evaluación."""
+    dataset_id: int
+    version_id: int
+    storage_path: str
+    evaluation_results: dict[str, Any]
+    best_model: str
+    best_score: float
+    plots_path: str
+
+@router.post("/evaluate", response_model=EvaluateResponse)
+def evaluate_models(
+    request: EvaluateRequest,
+    db=Depends(get_db_tasks)
+):
+    """
+    Evalúa modelos entrenados contra un dataset.
+    
+    - Si se especifica model_name, evalúa solo ese modelo
+    - Si no, evalúa todos los modelos disponibles
+    - Genera métricas completas y gráficos comparativos
+    """
+    logger.info(
+        "event=evaluate_start dataset_id=%s version_id=%s model_name=%s test_size=%s",
+        request.dataset_id,
+        request.version_id,
+        request.model_name,
+        request.test_size,
+    )
+
+    try:
+        # 1. Obtener el dataset
+        manager = DatasetServicesManager(db)
+        version = (
+            manager._get_latest_version(request.dataset_id)
+            if request.version_id is None
+            else manager._get_version(request.dataset_id, request.version_id)
+        )
+
+        dataset_path = Path(version["storage_path"])
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"El archivo del dataset no existe: {dataset_path}")
+
+        # 2. Cargar datos
+        df = pd.read_csv(dataset_path)
+        
+        # 3. Configurar path de módulos
+        if "/src" not in sys.path:
+            sys.path.insert(0, "/src")
+        if "/" not in sys.path:
+            sys.path.insert(0, "/")
+        
+        # 4. Importar módulos necesarios
+        from src.model_trainer import _get_feature_columns, _build_preprocessor
+        from src.evaluator import ModelEvaluator
+        from src.config import MODELS_DIR
+        
+        # 5. Verificar que existan modelos entrenados
+        if not MODELS_DIR.exists():
+            raise FileNotFoundError(f"No hay modelos entrenados en {MODELS_DIR}")
+        
+        # 6. Preparar datos para evaluación (mismo preprocesamiento que en entrenamiento)
+        target_col = "is_canceled"
+        
+        # Verificar que el target existe
+        if target_col not in df.columns:
+            raise ValueError(f"La columna objetivo '{target_col}' no existe en el dataset")
+        
+        X = df.drop(columns=[target_col])
+        y = df[target_col]
+
+        # Columnas a excluir (target o metadata)
+        EXCLUDED_COLUMNS = ['reservation_status', 'reservation_status_date']
+
+        # Seleccionar solo las características
+        feature_columns = [col for col in X.columns if col not in EXCLUDED_COLUMNS]
+        X_features = X[feature_columns]
+
+        logger.info(f"Columnas de características ({len(feature_columns)}): {feature_columns}")
+        # Debería mostrar 29 o 28 columnas
+
+        logger.info(f"Forma de X: {X.shape}")
+        logger.info(f"Columnas: {X.columns.tolist()}")
+        logger.info(f"Número de características esperadas: 29")
+        
+        # Identificar columnas y construir preprocesador
+        numeric_cols, categorical_cols = _get_feature_columns(df, target_col)
+        preprocessor = _build_preprocessor(numeric_cols, categorical_cols)
+        
+        # Dividir datos (misma semilla que en entrenamiento para consistencia)
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, 
+            test_size=request.test_size, 
+            random_state=request.random_state,
+            stratify=y
+        )
+        
+        # Preprocesar datos de test
+        preprocessor.fit(X_train)  # Fit en train
+        X_test_proc = preprocessor.transform(X_test)
+        
+        # 7. Cargar modelos a evaluar
+        models_dict = {}
+        
+        if request.model_name:
+            # Evaluar solo un modelo específico
+            model_path = MODELS_DIR / f"{request.model_name}.pkl"
+            if not model_path.exists():
+                model_path = MODELS_DIR / f"{request.model_name}.keras"
+            if not model_path.exists():
+                raise FileNotFoundError(f"Modelo {request.model_name} no encontrado")
+            
+            model = joblib.load(model_path) if model_path.suffix == '.pkl' else _load_keras_model(model_path)
+            models_dict[request.model_name] = model
+        else:
+            # Evaluar todos los modelos
+            for pkl_path in MODELS_DIR.glob("*.pkl"):
+                if "best_model" not in pkl_path.stem:
+                    models_dict[pkl_path.stem] = joblib.load(pkl_path)
+            
+            # También buscar modelos Keras
+            for keras_path in MODELS_DIR.glob("*.keras"):
+                if "best_model" not in keras_path.stem:
+                    models_dict[keras_path.stem] = _load_keras_model(keras_path)
+        
+        if not models_dict:
+            raise FileNotFoundError(f"No se encontraron modelos para evaluar en {MODELS_DIR}")
+        
+        logger.info(f"Evaluando {len(models_dict)} modelos: {list(models_dict.keys())}")
+        
+        # 8. Ejecutar evaluación
+        evaluator = ModelEvaluator(output_dir=MODELS_DIR / "evaluation_reports")
+        
+        # Generar reporte completo
+        report = evaluator.generate_report(
+            models_dict, 
+            X_test_proc, 
+            y_test,
+            feature_names=numeric_cols + categorical_cols,
+            save=True
+        )
+        
+        # 9. Determinar mejor modelo
+        df_comparison = pd.DataFrame(report["comparison"])
+        if "roc_auc" in df_comparison.columns:
+            best_idx = df_comparison["roc_auc"].idxmax()
+            best_model = df_comparison.loc[best_idx, "model"]
+            best_score = float(df_comparison.loc[best_idx, "roc_auc"])
+        else:
+            best_model = None
+            best_score = None
+        
+        # 10. Guardar reporte en JSON
+        report_path = MODELS_DIR / "evaluation_reports" / f"dataset_{request.dataset_id}_v{version['id']}_report.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(report_path, 'w', encoding='utf-8') as f:
+            # Convertir a serializable
+            serializable_report = {
+                "dataset_id": request.dataset_id,
+                "version_id": version["id"],
+                "test_size": request.test_size,
+                "random_state": request.random_state,
+                "models": {
+                    name: {
+                        k: v for k, v in metrics.items() 
+                        if not k.startswith('_')
+                    }
+                    for name, metrics in report["models"].items()
+                },
+                "comparison": report["comparison"],
+                "best_model": best_model,
+                "best_score": best_score
+            }
+            json.dump(serializable_report, f, indent=2, default=str)
+        
+        logger.info(
+            "event=evaluate_success dataset_id=%s version_id=%s models_evaluated=%d best_model=%s best_score=%.4f",
+            request.dataset_id,
+            version["id"],
+            len(models_dict),
+            best_model,
+            best_score or 0
+        )
+        
+        return EvaluateResponse(
+            dataset_id=request.dataset_id,
+            version_id=version["id"],
+            storage_path=str(dataset_path),
+            evaluation_results={
+                "models": {
+                    name: {
+                        k: v for k, v in metrics.items() 
+                        if not k.startswith('_')
+                    }
+                    for name, metrics in report["models"].items()
+                },
+                "comparison_table": report["comparison"],
+                "plots": report["plots"]
+            },
+            best_model=best_model,
+            best_score=best_score,
+            plots_path=str(MODELS_DIR / "evaluation_reports")
+        )
+        
+    except FileNotFoundError as exc:
+        logger.warning("event=evaluate_file_not_found detail=%s", str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except ValueError as exc:
+        logger.warning("event=evaluate_value_error detail=%s", str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except Exception as exc:
+        logger.exception("event=evaluate_error dataset_id=%s version_id=%s", request.dataset_id, request.version_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+def _load_keras_model(path: Path):
+    """Helper para cargar modelos Keras."""
+    try:
+        from tensorflow.keras.models import load_model
+        return load_model(path)
+    except ImportError:
+        raise ImportError("TensorFlow necesario para cargar modelos .keras")
 
 @router.get("/datasets/{dataset_id}/versions/{version_id}/preview")
 def preview_dataset_version(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
