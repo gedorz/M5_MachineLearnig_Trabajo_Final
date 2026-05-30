@@ -372,6 +372,25 @@ h1 {
   margin: 0 0 10px;
 }
 
+.csv-loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.csv-loading-state p {
+  margin: 0;
+}
+
+.csv-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 94, 255, 0.2);
+  border-top-color: var(--blue);
+  animation: csv-spin 0.9s linear infinite;
+}
+
 .csv-columns-list {
   display: flex;
   flex-wrap: wrap;
@@ -492,6 +511,12 @@ h1 {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes csv-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
