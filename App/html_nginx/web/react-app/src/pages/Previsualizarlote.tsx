@@ -35,6 +35,9 @@ type VisualizationsResponse = {
 	cancelationsDistribution: string;
 	numericHistograms: string;
 	outlierBoxplots: string;
+	cancelationsByHotel: string;
+	cancelationsByMonth: string;
+	leadTimeDistribution: string;
 };
 
 type ApiErrorResponse = {
@@ -97,6 +100,9 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					cancelationsResponse,
 					numericHistogramsResponse,
 					boxplotsResponse,
+					cancelationsByHotelResponse,
+					cancelationsByMonthResponse,
+					leadTimeDistributionResponse,
 				] = await Promise.all([
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/data-info`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histplot-adr`),
@@ -106,6 +112,9 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/distribution-cancelaciones`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histogramas-numericos`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/boxplots-outliers`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/cancelaciones-por-hotel`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/cancelaciones-por-mes`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/lead-time-distribution`),
 				]);
 
 				const [
@@ -117,6 +126,9 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					cancelationsPayload,
 					numericHistogramsPayload,
 					boxplotsPayload,
+					cancelationsByHotelPayload,
+					cancelationsByMonthPayload,
+					leadTimeDistributionPayload,
 				] = await Promise.all([
 					parseJsonSafely<DataInfoResponse & ApiErrorResponse>(infoResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(histResponse),
@@ -126,6 +138,9 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(numericHistogramsResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(boxplotsResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsByHotelResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsByMonthResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(leadTimeDistributionResponse),
 				]);
 
 				if (!infoResponse.ok) {
@@ -178,6 +193,27 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					);
 				}
 
+				if (!cancelationsByHotelResponse.ok) {
+					warnings.push(
+						cancelationsByHotelPayload?.detail ??
+							`No se pudo cargar la gráfica Comparar cancelados vs no cancelados por tipo de hotel (HTTP ${cancelationsByHotelResponse.status}).`
+					);
+				}
+
+				if (!cancelationsByMonthResponse.ok) {
+					warnings.push(
+						cancelationsByMonthPayload?.detail ??
+							`No se pudo cargar la gráfica Cancelaciones por mes (HTTP ${cancelationsByMonthResponse.status}).`
+					);
+				}
+
+				if (!leadTimeDistributionResponse.ok) {
+					warnings.push(
+						leadTimeDistributionPayload?.detail ??
+							`No se pudo cargar la gráfica Distribución de lead time (HTTP ${leadTimeDistributionResponse.status}).`
+					);
+				}
+
 				setDataInfo(infoPayload);
 				setVisualizations({
 					histplotAdr: histResponse.ok && histPayload?.plot ? histPayload.plot : "",
@@ -187,6 +223,12 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					cancelationsDistribution: cancelationsResponse.ok && cancelationsPayload?.plot ? cancelationsPayload.plot : "",
 					numericHistograms: numericHistogramsResponse.ok && numericHistogramsPayload?.plot ? numericHistogramsPayload.plot : "",
 					outlierBoxplots: boxplotsResponse.ok && boxplotsPayload?.plot ? boxplotsPayload.plot : "",
+					cancelationsByHotel:
+						cancelationsByHotelResponse.ok && cancelationsByHotelPayload?.plot ? cancelationsByHotelPayload.plot : "",
+					cancelationsByMonth:
+						cancelationsByMonthResponse.ok && cancelationsByMonthPayload?.plot ? cancelationsByMonthPayload.plot : "",
+					leadTimeDistribution:
+						leadTimeDistributionResponse.ok && leadTimeDistributionPayload?.plot ? leadTimeDistributionPayload.plot : "",
 				});
 				setErrorMessage(warnings.join(" "));
 
@@ -365,6 +407,45 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 									className="csv-plot-image"
 									src={`data:image/png;base64,${visualizations.pairplot}`}
 									alt="Pairplot de variables"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Comparar cancelados vs no cancelados por tipo de hotel</h3>
+							{visualizations?.cancelationsByHotel ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.cancelationsByHotel}`}
+									alt="Cancelaciones por tipo de hotel"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Cancelaciones por mes</h3>
+							{visualizations?.cancelationsByMonth ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.cancelationsByMonth}`}
+									alt="Cancelaciones por mes"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+						<section className="csv-info-card">
+							<h3>Distribución de lead time</h3>
+							{visualizations?.leadTimeDistribution ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.leadTimeDistribution}`}
+									alt="Distribución de lead time"
 								/>
 							) : (
 								<p>No hay gráfica disponible para esta versión.</p>
