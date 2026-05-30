@@ -38,6 +38,8 @@ type VisualizationsResponse = {
 	cancelationsByHotel: string;
 	cancelationsByMonth: string;
 	leadTimeDistribution: string;
+	adrByHotelAndCancellation: string;
+	correlationWithTarget: string;
 };
 
 type ApiErrorResponse = {
@@ -103,6 +105,8 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					cancelationsByHotelResponse,
 					cancelationsByMonthResponse,
 					leadTimeDistributionResponse,
+					adrByHotelAndCancellationResponse,
+					correlationWithTargetResponse,
 				] = await Promise.all([
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/data-info`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/histplot-adr`),
@@ -115,6 +119,8 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/cancelaciones-por-hotel`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/cancelaciones-por-mes`),
 					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/lead-time-distribution`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/adr-por-hotel-cancelacion`),
+					fetch(`/apim5/datasets-viewer/${activeDataset.datasetId}/versions/${selectedVersionId}/plots/correlacion-variable-objetivo`),
 				]);
 
 				const [
@@ -129,6 +135,8 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					cancelationsByHotelPayload,
 					cancelationsByMonthPayload,
 					leadTimeDistributionPayload,
+					adrByHotelAndCancellationPayload,
+					correlationWithTargetPayload,
 				] = await Promise.all([
 					parseJsonSafely<DataInfoResponse & ApiErrorResponse>(infoResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(histResponse),
@@ -141,6 +149,8 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsByHotelResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(cancelationsByMonthResponse),
 					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(leadTimeDistributionResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(adrByHotelAndCancellationResponse),
+					parseJsonSafely<SinglePlotResponse & ApiErrorResponse>(correlationWithTargetResponse),
 				]);
 
 				if (!infoResponse.ok) {
@@ -214,6 +224,20 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 					);
 				}
 
+				if (!adrByHotelAndCancellationResponse.ok) {
+					warnings.push(
+						adrByHotelAndCancellationPayload?.detail ??
+							`No se pudo cargar la gráfica ADR por tipo de hotel y cancelación (HTTP ${adrByHotelAndCancellationResponse.status}).`
+					);
+				}
+
+				if (!correlationWithTargetResponse.ok) {
+					warnings.push(
+						correlationWithTargetPayload?.detail ??
+							`No se pudo cargar la gráfica Correlación con variable objetivo (HTTP ${correlationWithTargetResponse.status}).`
+					);
+				}
+
 				setDataInfo(infoPayload);
 				setVisualizations({
 					histplotAdr: histResponse.ok && histPayload?.plot ? histPayload.plot : "",
@@ -229,6 +253,14 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 						cancelationsByMonthResponse.ok && cancelationsByMonthPayload?.plot ? cancelationsByMonthPayload.plot : "",
 					leadTimeDistribution:
 						leadTimeDistributionResponse.ok && leadTimeDistributionPayload?.plot ? leadTimeDistributionPayload.plot : "",
+					adrByHotelAndCancellation:
+						adrByHotelAndCancellationResponse.ok && adrByHotelAndCancellationPayload?.plot
+							? adrByHotelAndCancellationPayload.plot
+							: "",
+					correlationWithTarget:
+						correlationWithTargetResponse.ok && correlationWithTargetPayload?.plot
+							? correlationWithTargetPayload.plot
+							: "",
 				});
 				setErrorMessage(warnings.join(" "));
 
@@ -453,6 +485,19 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 						</section>
 
 						<section className="csv-info-card">
+							<h3>Visualizar nulos</h3>
+							{visualizations?.nullsHeatmap ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.nullsHeatmap}`}
+									alt="Mapa de valores nulos"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+						
+						<section className="csv-info-card">
 							<h3>Distribución de cancelaciones</h3>
 							{visualizations?.cancelationsDistribution ? (
 								<img
@@ -492,17 +537,32 @@ export default function PrevisualizarLotePage({ activeDataset, onDatasetVersionC
 						</section>
 
 						<section className="csv-info-card">
-							<h3>Visualizar nulos</h3>
-							{visualizations?.nullsHeatmap ? (
+							<h3>ADR por tipo de hotel y cancelación</h3>
+							{visualizations?.adrByHotelAndCancellation ? (
 								<img
 									className="csv-plot-image"
-									src={`data:image/png;base64,${visualizations.nullsHeatmap}`}
-									alt="Mapa de valores nulos"
+									src={`data:image/png;base64,${visualizations.adrByHotelAndCancellation}`}
+									alt="ADR por tipo de hotel y cancelación"
 								/>
 							) : (
 								<p>No hay gráfica disponible para esta versión.</p>
 							)}
 						</section>
+
+						<section className="csv-info-card">
+							<h3>Correlación con variable objetivo</h3>
+							{visualizations?.correlationWithTarget ? (
+								<img
+									className="csv-plot-image"
+									src={`data:image/png;base64,${visualizations.correlationWithTarget}`}
+									alt="Matriz de correlación con variable objetivo"
+								/>
+							) : (
+								<p>No hay gráfica disponible para esta versión.</p>
+							)}
+						</section>
+
+
 					</div>
 				)}
 			</article>

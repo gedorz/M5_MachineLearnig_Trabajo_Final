@@ -238,6 +238,62 @@ def _create_lead_time_distribution_figure(df_reservas: pd.DataFrame) -> plt.Figu
 	return figure
 
 
+def _create_adr_por_hotel_cancelacion_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	_require_columns(
+		df_reservas,
+		["hotel", "adr", "is_canceled"],
+		"Faltan columnas requeridas para la gráfica ADR por tipo de hotel y cancelación",
+	)
+
+	plot_df = df_reservas[["hotel", "adr", "is_canceled"]].copy()
+	plot_df["adr"] = pd.to_numeric(plot_df["adr"], errors="coerce")
+	plot_df = plot_df.dropna(subset=["adr"])
+
+	if plot_df.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No hay datos numéricos válidos en la columna 'adr' para generar la gráfica.",
+		)
+
+	figure, axis = plt.subplots(figsize=(10, 6))
+	sns.boxplot(data=plot_df, x="hotel", y="adr", hue="is_canceled", ax=axis)
+	axis.set_title("ADR por hotel y cancelación")
+	axis.set_xlabel("Hotel")
+	axis.set_ylabel("ADR")
+	axis.set_ylim(0, 500)
+	axis.legend(title="Is Canceled")
+	return figure
+
+
+def _create_correlation_heatmap_figure(df_reservas: pd.DataFrame) -> plt.Figure:
+	numeric_df = df_reservas.select_dtypes(include=["int64", "float64"])
+	if numeric_df.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No hay columnas numéricas disponibles para generar la matriz de correlación.",
+		)
+
+	if "is_canceled" not in numeric_df.columns:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="La columna 'is_canceled' no existe o no es numérica en esta versión del dataset.",
+		)
+
+	corr_matrix = numeric_df.corr()
+	if corr_matrix.empty:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="No se pudo calcular la matriz de correlación para esta versión del dataset.",
+		)
+
+	_ = corr_matrix["is_canceled"].sort_values(ascending=False)
+
+	figure, axis = plt.subplots(figsize=(14, 10))
+	sns.heatmap(corr_matrix, annot=False, cmap="coolwarm", center=0, ax=axis)
+	axis.set_title("Matriz de Correlación")
+	return figure
+
+
 @router.get("/datasets-viewer/{dataset_id}/versions")
 def list_dataset_versions(dataset_id: int, db=Depends(get_db_tasks)):
 	logger.info("event=datasets_viewer_versions_start dataset_id=%s", dataset_id)
@@ -453,4 +509,30 @@ def dataset_lead_time_distribution(dataset_id: int, version_id: int, db=Depends(
 	manager = DatasetServicesManager(db)
 	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
 	figure = _create_lead_time_distribution_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/adr-por-hotel-cancelacion")
+def dataset_adr_por_hotel_cancelacion(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_adr_por_hotel_cancelacion_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_adr_por_hotel_cancelacion_figure(df_reservas)
+	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/plots/correlacion-variable-objetivo")
+def dataset_correlacion_variable_objetivo(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
+	logger.info(
+		"event=datasets_viewer_correlacion_variable_objetivo_start dataset_id=%s version_id=%s",
+		dataset_id,
+		version_id,
+	)
+	manager = DatasetServicesManager(db)
+	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
+	figure = _create_correlation_heatmap_figure(df_reservas)
 	return _build_plot_response(dataset_id, version, figure)
