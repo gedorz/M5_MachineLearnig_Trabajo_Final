@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,6 @@ from dataBaseManagement.dbManagement import get_rows_by_condition_Generic, inser
 from .endpointContratos import (
 	FeaturePlanApplyRequest,
 	FeaturePlanApplyResponse,
-	FeaturePlanAutoMLRequest,
 	FeaturePlanCreateRequest,
 	FeaturePlanCreateResponse,
 	FeaturePlanGetResponse,
@@ -176,21 +174,6 @@ def _apply_plan_in_memory(df: pd.DataFrame, plan: FeaturePlanCreateRequest) -> t
 	return final_df, summary
 
 
-def _load_train_models_function():
-	if "/src" not in sys.path:
-		sys.path.insert(0, "/src")
-	if "/" not in sys.path:
-		sys.path.insert(0, "/")
-
-	repo_root = Path(__file__).resolve().parents[4]
-	if str(repo_root) not in sys.path:
-		sys.path.insert(0, str(repo_root))
-
-	from src.model_trainer import train_models  # noqa: WPS433
-
-	return train_models
-
-
 @router.get("/features/profile/{dataset_id}/versions/{version_id}", response_model=FeatureProfileResponse)
 def feature_profile(dataset_id: int, version_id: int, db=Depends(get_db_tasks)):
 	logger.info("event=feature_profile_start dataset_id=%s version_id=%s", dataset_id, version_id)
@@ -305,6 +288,7 @@ def apply_feature_plan(request: FeaturePlanApplyRequest, db=Depends(get_db_tasks
 			plan = FeaturePlanCreateRequest(**plan_dict)
 			plan_id_for_metadata = int(stored_plan_row["id"])
 
+		# summary retorna la configuracion del plan : columnas seleccionadas, excluidas, derivadas y si hay columnas de leakage presentes
 		transformed_df, summary = _apply_plan_in_memory(df, plan)
 
 		next_version_number = int(base_version["version_number"]) + 1
@@ -356,59 +340,5 @@ def apply_feature_plan(request: FeaturePlanApplyRequest, db=Depends(get_db_tasks
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 	except Exception as exc:
 		logger.exception("event=feature_plan_apply_error dataset_id=%s", request.dataset_id)
-		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
-
-
-@router.post("/features/automl/train")
-def train_with_feature_plan(request: FeaturePlanAutoMLRequest, db=Depends(get_db_tasks)):
-	logger.info(
-		"event=feature_automl_train_start dataset_id=%s version_id=%s plan_id=%s",
-		request.dataset_id,
-		request.version_id,
-		request.plan_id,
-	)
-	manager = DatasetServicesManager(db)
-	try:
-		version = _resolve_version(manager, request.dataset_id, request.version_id)
-		df = pd.read_csv(Path(version["storage_path"]))
-
-		if request.plan is not None:
-			plan = _normalize_plan(request.dataset_id, int(version["id"]), request.plan)
-			resolved_plan_id = None
-		else:
-			stored_plan_row = _resolve_latest_plan(db, request.dataset_id, int(version["id"]), plan_id=request.plan_id)
-			if not stored_plan_row:
-				raise ValueError("No se encontró Feature Plan para entrenar. Guarda un plan primero o envía plan inline.")
-			parameters = stored_plan_row.get("parameters_json") or {}
-			plan = FeaturePlanCreateRequest(**(parameters.get("plan") or {}))
-			resolved_plan_id = int(stored_plan_row["id"])
-
-		train_df, summary = _apply_plan_in_memory(df, plan)
-
-		train_models = _load_train_models_function()
-		results = train_models(
-			train_df,
-			target_col=plan.target_col,
-			test_size=request.test_size,
-			random_state=request.random_state,
-			primary_metric=request.primary_metric,
-			optimize_hyperparams=request.optimize_hyperparams,
-		)
-
-		return {
-			"dataset_id": request.dataset_id,
-			"version_id": int(version["id"]),
-			"plan_id": resolved_plan_id,
-			"feature_summary": summary.dict(),
-			"train_results": results,
-		}
-	except ValueError as exc:
-		logger.warning("event=feature_automl_train_invalid detail=%s", str(exc))
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-	except FileNotFoundError as exc:
-		logger.warning("event=feature_automl_train_file_not_found detail=%s", str(exc))
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-	except Exception as exc:
-		logger.exception("event=feature_automl_train_error dataset_id=%s", request.dataset_id)
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
