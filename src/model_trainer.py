@@ -31,7 +31,7 @@ except ImportError:
     print(" TensorFlow no instalado. La red neuronal no estará disponible.")
 
 from config import MODELS_DIR
-from src.data_loader import preprocess_dataset, _validate_dataset_columns
+from data_loader import preprocess_dataset, _validate_dataset_columns
 
 # Configurar directorio de modelos
 try:

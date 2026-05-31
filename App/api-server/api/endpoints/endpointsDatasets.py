@@ -426,6 +426,78 @@ def train_dataset(request: TrainRequest, db=Depends(get_db_tasks)):
         logger.exception("event=train_error dataset_id=%s version_id=%s", request.dataset_id, request.version_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
+
+class PredictRequest(BaseModel):
+    """Request para predicción.
+
+    Puede enviar `dataset_id`/`version_id` para predecir sobre un dataset cargado,
+    o `records` con una lista de objetos (filas) con las columnas de features.
+    """
+    dataset_id: int | None = None
+    version_id: int | None = None
+    records: list[dict] | None = None
+    model_name: str | None = None
+    limit: int | None = None
+
+
+@router.post("/predict")
+def predict_endpoint(request: PredictRequest, db=Depends(get_db_tasks)):
+    logger.info("event=predict_start dataset_id=%s version_id=%s model=%s limit=%s",
+                request.dataset_id, request.version_id, request.model_name, request.limit)
+
+    try:
+        # Obtener datos desde DB o usar registros enviados
+        if request.dataset_id is not None:
+            manager = DatasetServicesManager(db)
+            version = (
+                manager._get_latest_version(request.dataset_id)
+                if request.version_id is None
+                else manager._get_version(request.dataset_id, request.version_id)
+            )
+
+            dataset_path = Path(version["storage_path"])
+            if not dataset_path.exists():
+                raise FileNotFoundError(f"El archivo del dataset no existe: {dataset_path}")
+
+            df = pd.read_csv(dataset_path)
+            # Si viene la columna objetivo, la removemos antes de predecir
+            if "is_canceled" in df.columns:
+                X = df.drop(columns=["is_canceled"])
+            else:
+                X = df
+
+            if request.limit:
+                X = X.head(request.limit)
+
+        elif request.records:
+            X = pd.DataFrame(request.records)
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Debe proporcionar 'dataset_id' o 'records' en el body")
+
+        # Asegurar availability de /src
+        if "/src" not in sys.path:
+            sys.path.insert(0, "/src")
+        if "/" not in sys.path:
+            sys.path.insert(0, "/")
+
+        from src.predictor import load_model_by_name, predict_from_dataframe
+
+        model, model_type, model_identifier = load_model_by_name(request.model_name)
+
+        predictions = predict_from_dataframe(X, model, model_type)
+
+        return {"model": model_identifier, "predictions": predictions, "n": len(predictions)}
+
+    except FileNotFoundError as exc:
+        logger.warning("event=predict_file_not_found detail=%s", str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("event=predict_error dataset_id=%s version_id=%s", request.dataset_id, request.version_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
 class EvaluateRequest(BaseModel):
     """Request para evaluación de modelos."""
     dataset_id: int = Field(..., description="ID del dataset a evaluar")

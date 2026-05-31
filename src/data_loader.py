@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Any
 
-from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATASET_PATH, REQUIRED_COLUMNS, TARGET_COLUMN
+from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATASET_PATH, REQUIRED_COLUMNS, TARGET_COLUMN
 
 
 def ensure_data_dirs() -> None:
