@@ -175,3 +175,77 @@ proyecto-final-ML/
 
 
 .
+
+---
+
+## 9 Guía operativa de la subpágina: Definir features
+
+Objetivo de la subpágina Definir features:
+- Determinar las variables predictoras y la variable objetivo para entrenar modelos robustos.
+
+Checklist operativo de Definir features:
+- Excluir columnas con fuga de informacion.
+- Crear variables derivadas relevantes.
+- Documentar justificacion de cada feature.
+
+### 9.1 Paso a paso para definicion de una Matriz de Featues(caracteristicas de los dato) 
+
+1. Definir variable objetivo del problema (Cancelacion de las reservaciones)
+- Variable objetivo: `is_canceled` (0 no cancela, 1 cancela) .
+- Confirmar que todas las decisiones de features responden a este objetivo binario (Seleccion de la caracteristica con un check de usar o no usar).
+
+2. Construir listado inicial de variables candidatas
+- Incluir todas las columnas del dataset excepto la objetivo.
+- Separar por tipo: Numericas, categoricas, fecha/tiempo e identificadores.
+
+3. Excluir variables con fuga de informacion (data leakage)
+- Regla: excluir cualquier variable que se conozca despues del momento de prediccion.
+- Candidatas tipicas a revisar por fuga: `reservation_status`, `reservation_status_date` y variables operativas que cambian despues de la reserva.
+
+4. Diseñar features derivadas con sentido de negocio (No se desarrolla en esta version)
+- Proponer variables derivadas y su formula antes de entrenar modelos.
+- Ejemplos:
+    - `total_noches = stays_in_weekend_nights + stays_in_week_nights`
+    - `total_huespedes = adults + children + babies`
+    - `historial_cancelacion = previous_cancellations / (previous_cancellations + previous_bookings_not_canceled + 1)`
+    - `temporada_alta` derivada de `arrival_date_month`
+
+5. Definir transformaciones por tipo de variable
+- Numericas: imputacion de nulos, escalado si aplica.
+- Categoricas: codificacion (one-hot o equivalente), manejo de categorias raras.
+- Fechas: extraccion de componentes utiles (mes, semana, estacionalidad).
+
+6. Establecer criterios de inclusion/exclusion
+- Cobertura de datos (porcentaje de nulos aceptable).
+- Estabilidad temporal (que no dependa de informacion futura).
+- Utilidad de negocio (explicable para el dominio hotelero).
+- Utilidad tecnica (impacto esperado en F1 y ROC-AUC).
+
+7. Documentar decisiones feature por feature
+- Completar la matriz de justificacion y versionarla junto al experimento.
+- Dejar evidencia de por que una variable se usa, se transforma o se excluye.
+
+8. Definir salida de esta subpágina
+- Lista final de features aprobadas.
+- Lista de features excluidas por fuga o baja calidad.
+- Diccionario de transformaciones por feature.
+- Matriz de justificacion firmada para auditoria del experimento.
+
+### 9.2 Matriz de justificacion de features (plantilla)
+
+| feature | tipo | usar (si/no) | motivo de negocio | motivo tecnico | riesgo de fuga (alto/medio/bajo) | transformacion | notas |
+|--------|------|--------------|-------------------|----------------|-----------------------------------|----------------|-------|
+| lead_time | numerica | si | Anticipacion de reserva | Predictor fuerte en cancelacion | bajo | escalar/imputar | validar outliers |
+| reservation_status | categorica | no | Estado final de la reserva | Introduce leakage directo | alto | excluir | se conoce al final |
+| reservation_status_date | fecha | no | Fecha de estado final | Variable posterior al evento | alto | excluir | no disponible al predecir |
+| country | categorica | si | Segmentacion geografica | puede requerir agrupacion | bajo | codificar/agrupar raras | revisar cardinalidad |
+| total_noches | derivada numerica | si | Duracion de estancia | mejora señal de comportamiento | bajo | crear + escalar | suma de noches |
+
+### 9.3 Criterio de cierre de la subpágina
+
+Se considera completada la subpágina Definir features cuando exista evidencia de:
+- Objetivo binario validado (`is_canceled`).
+- Variables con fuga identificadas y excluidas.
+- Features derivadas definidas con formula.
+- Matriz de justificacion completa para todas las features finales.
+- Entrega de lista final para la siguiente etapa de preprocesamiento y entrenamiento.
