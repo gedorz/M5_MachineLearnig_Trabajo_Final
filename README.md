@@ -12,7 +12,6 @@
     - Se propone adjunto el dataset que se utilizará para llevar a cabo el proyecto.
     - Usar las funciones metodos y algoridmos planteadas en \notebooks\exploracion\TestPractica.ipynb
 
-
 # Requisitos mínimos del sistema.
 
 ## 1 Problema de clasificación binaria 

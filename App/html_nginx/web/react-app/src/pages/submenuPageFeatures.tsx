@@ -298,7 +298,7 @@ export default function SubmenuPageFeatures({ activeDataset, onDatasetVersionCha
       setErrorMessage("No hay dataset/version activos para guardar el plan.");
       return;
     }
-
+    // este es el equivalente a la funcion preprocess_dataset del scr/ model_trainer.py, se encarga de validar y transformar la información del plan antes de enviarla al backend
     setIsSaving(true);
     setErrorMessage("");
     setSuccessMessage("");
@@ -316,6 +316,9 @@ export default function SubmenuPageFeatures({ activeDataset, onDatasetVersionCha
         throw new Error(result?.detail ?? "No se pudo guardar el Feature Plan.");
       }
 
+      // El plan se guarda para que sea usado autoML al aplicar el plan, 
+      // no es necesario cargarlo en el estado para mostrarlo en la UI,
+      // pero se hace para mostrar un mensaje de éxito con el ID del plan guardado
       setSavedPlan(result);
       localStorage.setItem(
         FEATURE_PLAN_STORAGE_KEY,

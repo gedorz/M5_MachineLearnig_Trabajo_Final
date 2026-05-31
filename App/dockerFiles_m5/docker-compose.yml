@@ -45,7 +45,6 @@ services:
             - "0.0.0.0:8080:8000"
         volumes:
             - ../api-server/api:/app
-            - ../../src:/src
             - api_data_m5:/app/data
         command: uvicorn main:app --host 0.0.0.0 --port 8000 --root-path=/apim5 --reload    
         extra_hosts:
