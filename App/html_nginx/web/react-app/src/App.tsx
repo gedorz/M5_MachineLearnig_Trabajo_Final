@@ -3,6 +3,8 @@ import type { CSSProperties } from "react";
 import ImportarDatosPage from "./pages/importarDatos";
 import PrevisualizarLotePage from "./pages/Previsualizarlote";
 import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
+import SubmenuPageFeatures from "./pages/submenuPageFeatures";
+import SubmenuPageAutoML from "./pages/submenuPageAutoML";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
 type SubmenuItem = {
@@ -278,6 +280,16 @@ export default function App() {
           />
         ) : activeContext.submenu.id === "preprocesamiento-balanceo" ? (
           <ProcesamientoBalanceoPage
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "definir-features" ? (
+          <SubmenuPageFeatures
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "lanzar-automl" ? (
+          <SubmenuPageAutoML
             activeDataset={activeDataset}
             onDatasetVersionChange={handleDatasetVersionChange}
           />

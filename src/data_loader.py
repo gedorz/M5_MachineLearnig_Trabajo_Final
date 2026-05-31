@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import pandas as pd
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
 
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATASET_PATH, REQUIRED_COLUMNS, TARGET_COLUMN
 
@@ -118,6 +121,58 @@ def load_dataset_from_db(dataset_id: int, version_id: int | None = None) -> pd.D
             version = get_record_by_id_Generic("dataset_versions", version_id, connection=conn)
             if not version or int(version.get("dataset_id", -1)) != int(dataset_id):
                 raise ValueError(f"La versión {version_id} no corresponde al dataset {dataset_id}")
+
+    storage_path = Path(version["storage_path"]) if version.get("storage_path") else None
+    if storage_path is None or not storage_path.exists():
+        raise FileNotFoundError(f"El archivo CSV en storage_path no existe: {storage_path}")
+
+    df = pd.read_csv(storage_path)
+    _validate_dataset_columns(df)
+    return df
+
+
+def load_dataset_from_api(
+    dataset_id: int,
+    version_id: int | None = None,
+    base_url: str = "http://localhost/apim5",
+) -> pd.DataFrame:
+    """Carga un dataset consultando metadata de versiones vía API.
+
+    Mantiene la lógica de load_dataset_from_db:
+    - Si version_id es None, usa la última versión.
+    - Si version_id viene informado, valida que pertenezca al dataset.
+    - Carga el CSV desde storage_path y valida columnas obligatorias.
+    """
+    base_url = base_url.rstrip("/")
+    dataset_url = f"{base_url}/datasets/{dataset_id}"
+
+    try:
+        with urlopen(dataset_url) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        try:
+            detail_payload = json.loads(exc.read().decode("utf-8"))
+            detail = detail_payload.get("detail", str(exc))
+        except Exception:
+            detail = str(exc)
+
+        if exc.code == 404:
+            raise ValueError(f"No se encontró el dataset {dataset_id}: {detail}")
+        raise ConnectionError(f"Error HTTP al consultar la API ({dataset_url}): {detail}")
+    except URLError as exc:
+        raise ConnectionError(
+            f"No se pudo conectar a la API en {base_url}. Verifica que esté publicada y accesible."
+        ) from exc
+
+    if version_id is None:
+        version = payload.get("latest_version")
+        if not version:
+            raise ValueError(f"No se encontró ninguna versión para el dataset {dataset_id}")
+    else:
+        versions = payload.get("versions") or []
+        version = next((row for row in versions if int(row.get("id", -1)) == int(version_id)), None)
+        if not version or int(version.get("dataset_id", -1)) != int(dataset_id):
+            raise ValueError(f"La versión {version_id} no corresponde al dataset {dataset_id}")
 
     storage_path = Path(version["storage_path"]) if version.get("storage_path") else None
     if storage_path is None or not storage_path.exists():

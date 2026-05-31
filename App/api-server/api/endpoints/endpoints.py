@@ -4,12 +4,14 @@ from .endpointsTasks import router as task_router
 from .endpointsCargaDatos import router as cargadatos_router
 from .endpointsDatasets import router as datasets_router
 from .endpointsDatasetsViewer import router as datasets_viewer_router
+from .endPointFeatures import router as features_router
     
 router = APIRouter()
 router.include_router(task_router)
 router.include_router(cargadatos_router)
 router.include_router(datasets_router)
 router.include_router(datasets_viewer_router)
+router.include_router(features_router)
 
 def init_fastapi():
     description = """
