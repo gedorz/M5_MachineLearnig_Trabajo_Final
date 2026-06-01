@@ -5,6 +5,7 @@ import PrevisualizarLotePage from "./pages/Previsualizarlote";
 import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
 import SubmenuPageFeatures from "./pages/submenuPageFeatures";
 import SubmenuPageAutoML from "./pages/submenuPageAutoML";
+import SubmenuCompararMetricas from "./pages/submenuCompararMetricas";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
 type SubmenuItem = {
@@ -290,6 +291,11 @@ export default function App() {
           />
         ) : activeContext.submenu.id === "lanzar-automl" ? (
           <SubmenuPageAutoML
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "comparar-metricas" ? (
+          <SubmenuCompararMetricas
             activeDataset={activeDataset}
             onDatasetVersionChange={handleDatasetVersionChange}
           />
