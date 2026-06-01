@@ -68,7 +68,7 @@ export default function SubmenuPageAutoML({ activeDataset, onDatasetVersionChang
   } = useDatasetVersions(activeDataset, onDatasetVersionChange);
 
   useEffect(() => {
-    if (!activeDataset) {
+    if (!activeDataset || !selectedVersionId) {
       setStoredPlanId(null);
       return;
     }
@@ -86,7 +86,7 @@ export default function SubmenuPageAutoML({ activeDataset, onDatasetVersionChang
         planId: number;
       };
 
-      if (parsed.datasetId === activeDataset.datasetId && parsed.versionId === activeDataset.versionId) {
+      if (parsed.datasetId === activeDataset.datasetId && parsed.versionId === selectedVersionId) {
         setStoredPlanId(parsed.planId);
         setManualPlanId(String(parsed.planId));
       } else {
@@ -95,7 +95,7 @@ export default function SubmenuPageAutoML({ activeDataset, onDatasetVersionChang
     } catch {
       setStoredPlanId(null);
     }
-  }, [activeDataset]);
+  }, [activeDataset, selectedVersionId]);
 
   useEffect(() => {
     if (versionError) {
