@@ -111,7 +111,7 @@ Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede
 
 ---
 
-## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning
+## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning planteado
 
 Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
@@ -120,16 +120,28 @@ proyecto-final-ML/
 │
 ├── .gitignore                              # Archivos que no se suben al repo (e.g., modelos, datos temporales)
 │           
+├── .gitignore                             # Archivos que no se suben al repo (e.g., modelos, archivos de desarrollo)
 ├── APP/                                   # Datos usados en el proyecto
-│   ├── api-server/                          # Api de servicio para el proceso y entrenamiento de dato
-│   └── dockerFiles_m5/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
-│   └── html_nginx/                          # Pagina web para cargar los datos activar el reentrenamiento y
-│   │   └── web                              # mostrar los resultados de los modelos y predicciones. 
-│   │       └── index.html  
-│   │      
-├── data/                                   # Datos usados en el proyecto
-│   ├── raw/                                # Datos originales sin procesar
-│   └── processed/                          # Datos tras limpieza y transformación (listos para modelar)
+│   ├── api-server/                        # Api de servicio para el proceso y entrenamiento de dato
+│   ├── dockerFiles_m5/                    # Constructor de los servidores de Fastapi base de datos de postgres y web UI
+│   └── html_nginx/                        # Pagina web para cargar los datos activar el reentrenamiento y
+│       └── web                            # mostrar los resultados de los modelos y predicciones. 
+│           └──react-app
+│               └──index.html                 # entrada a toda la app
+│          
+├── data/                                  # Datos usados en el proyecto Volumen de Dockerfiles_m5_api_data_m5
+│    ├── Datasets 
+│    │   ├── raw/                           # Datos originales sin procesar del csv
+│    │   └── versions/                      # 
+│    │       └── Dataset_"#"                # Datos tras limpieza y transformación (listos para modelar)  en formato csv  
+│    └── models                             # modelos generados por train     
+│        ├── best_model.pkl
+│        ├── DecisionTree.pkl
+│        ├── LogisticRegression.pkl
+│        ├── NeuralNetwork.keras
+│        ├── RandomForest.pkl
+│        └── XGBoost.pkl
+│
 │           
 ├── docs/                                   # Documentación adicional
 │           
@@ -174,7 +186,7 @@ proyecto-final-ML/
 
 - `src/config.py` - rutas y configuración general de directorios.
 - `src/data_loader.py` - carga datos CSV y prepara el DataFrame.
-- `src/model_trainer.py` - entrena modelos: regresión logística, árbol de decisión, Random Forest, XGBoost y red neuronal Keras opcional.
+- `src/model_trainer.py` - entrena modelos: regresión logística, árbol de decisión, Random Forest, XGBoost y red neuronal Keras (opcional).
 - `src/evaluator.py` - evalúa modelos, calcula métricas, matriz de confusión y curvas ROC.
 - `src/predictor.py` - carga el mejor modelo guardado y genera predicciones.
 - `src/main.py` - orquesta el pipeline completo de ML (carga, entrenamiento, evaluación y predicción).
@@ -188,12 +200,12 @@ proyecto-final-ML/
 - Dependencias definidas en `requirements.txt`.
 - Dataset disponible en `data/raw/dataset_practica_final.csv`.
 
-## 11. Crear entorno virtual e instalar dependencias
+## 11. Crear entorno virtual e instalar dependencias para ejecucion de scr localmente
 
 En Windows PowerShell:
 
 ```powershell
-cd C:\Users\diego\Documents\Repositorios\PontIA\MachineLearningTrabajoFinal
+cd C:\Users\Documents\Repositorios\PontIA\MachineLearningTrabajoFinal
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -228,65 +240,9 @@ Este script realiza:
 
 La API se expone desde el servidor FastAPI ubicado en `App/api-server/api/main.py`. ó http://localhost/apim5/docs#
 
-### Endpoints implementados
+### Endpoints implementados del servidor API
 
-- `GET  /` - estado básico de la API.
-- `GET  /apim5/openapi.json` - esquema OpenAPI de la API.
-- `POST /train` - entrena modelos usando un dataset almacenado en base de datos.
-- `POST /predict` - genera predicciones con el modelo cargado.
-- `POST /evaluate` - evalúa los modelos existentes y genera métricas comparativas.
-
-- `POST /cargadatoscsv` - argadatoscsv
-- `POST /datasets/upload` - Upload Dataset
-- `GET  /datasets/{dataset_id}` - Get Dataset
-- `GET  /datasets/{dataset_id}/preview` - Preview Latest Dataset Version
-
-- `GET /datasets/{dataset_id}/versions/{version_id}/` - Preview Dataset Version
-- `GET /datasets/{dataset_id}/null-summary` -  Null Summary Latest Dataset Version
-- `GET /datasets/{dataset_id}/versions/{version_id}/null-summary` -  Null Summary Dataset Version
-- `POST /datasets/{dataset_id}/versions/{version_id}/lowercase-columns` -  Lowercase Dataset Columns
-
-- `GET /datasets-viewer/{dataset_id}/versions` -  List Dataset Versions
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/data-info` -   Dataset Data Info
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/distribution` -  Dataset Distribution Plots
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/distribution-cancelaciones` -  Dataset Distribution Cancelaciones
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histogramas-numericos` -  Dataset Histogramas Numericos
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/boxplots-outliers` -  Dataset Boxplots Outliers
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histplot-adr` -  Dataset Histplot Adr
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histplot-adr-kde` -  Dataset Histplot Adr Kde
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/pairplot Dataset Pairplot` - 
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/nulls-heatmap Dataset Nulls Heatmap` - 
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-hotel` -  Dataset Cancelaciones Por Hotel
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-mes` -  Dataset Cancelaciones Por Mes
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/lead-time-distribution` -  Dataset Lead Time Distribution
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/adr-por-hotel-cancelacion` -  Dataset Adr Por Hotel Cancelacion
-- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/correlacion-variable-objetivo` -  Dataset Correlacion Variable Objetivo
-
-- `GET /features/profile/{dataset_id}/versions/{version_id}` -  Feature Profile
-- `POST /features/plan Create Feature Plan
-- `GET /features/plan/{dataset_id}/versions/{version_id}/latest` -  Get Latest Feature Plan 
-- `POST /features/apply Apply` -  Feature Plan
-- `POST /features/automl/train` -  Train With Feature Plan
-
-- `POST /evaluate` -   Evaluate Models
-- `POST /train` -  Train Dataset
-- `POST /predict` -  Predict Endpoint
-
-### Ejemplo de uso de `/predict`
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"dataset_id": 1, "limit": 10}'
-```
-
-También se puede usar:
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"records": [{"hotel":"Resort","lead_time":15,...}], "model_name":"best_model"}'
-```
+[Explicacion de endpoints del servidor API](App/README.md)
 
 ## 7. Pipeline de modelos y validación
 
@@ -338,7 +294,7 @@ El evaluador genera:
 
 Se guardan gráficos y reportes en el directorio de salida configurado por `src/evaluator.py`.
 
-## 9. Notas de implementación
+### Notas de implementación
 
 - El endpoint de predicción `/predict` admite entrada de un dataset ya almacenado en la base de datos o un conjunto de registros en JSON.
 - El módulo `src/predictor.py` carga el mejor modelo disponible o el modelo solicitado mediante `model_name`.
@@ -396,7 +352,7 @@ Checklist operativo de Definir features:
 - Diccionario de transformaciones por feature.
 - Matriz de justificacion firmada para auditoria del experimento.
 
-### 9.2 Matriz de justificacion de features (plantilla)
+### 9.2 Matriz de justificacion de features (plantilla de entrenamiento)
 
 | feature | tipo | usar (si/no) | motivo de negocio | motivo tecnico | riesgo de fuga (alto/medio/bajo) | transformacion | notas |
 |--------|------|--------------|-------------------|----------------|-----------------------------------|----------------|-------|
@@ -406,7 +362,7 @@ Checklist operativo de Definir features:
 | country | categorica | si | Segmentacion geografica | puede requerir agrupacion | bajo | codificar/agrupar raras | revisar cardinalidad |
 | total_noches | derivada numerica | si | Duracion de estancia | mejora señal de comportamiento | bajo | crear + escalar | suma de noches |
 
-### 9.3 Criterio de cierre de la subpágina
+### 9.3 Criterio de cierre de la subpágina  Panel operativo de modelos - Configuración general del plan
 
 Se considera completada la subpágina Definir features cuando exista evidencia de:
 - Objetivo binario validado (`is_canceled`).
