@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -10,6 +11,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, status
+from psycopg2.extras import Json
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
@@ -22,6 +24,7 @@ from sklearn.tree import DecisionTreeClassifier
 import xgboost as xgb
 
 from dataBaseManagement.dbConectionPostgres import get_db_tasks
+from dataBaseManagement.dbManagement import insert_record_Generic
 from .endpointContratos import FeaturePlanAutoMLRequest, FeaturePlanCreateRequest, FeaturePlanSummary
 from .endPointFeatures import _apply_plan_in_memory, _normalize_plan, _resolve_latest_plan, _resolve_version
 from .endpointsDatasets import DatasetServicesManager
@@ -31,6 +34,7 @@ logger = logging.getLogger("api.endPointEntrenarAutoML")
 warnings.filterwarnings("ignore")
 
 MODELS_DIR = Path(__file__).resolve().parents[1] / "data" / "models"
+AUTO_ML_OPERATION = "automl_train_feature_plan_v1"
 
 # Intentar cargar TensorFlow/Keras opcionalmente sin romper análisis estático.
 try:
@@ -170,6 +174,7 @@ def _score_model(estimator: Any, X_val: pd.DataFrame, y_val: pd.Series) -> Dict[
 		except Exception:
 			y_proba = np.zeros(len(y_val))
 
+	# Asegura que las métricas sean valores float para compatibilidad con JSON.
 	return {
 		"accuracy": float(accuracy_score(y_val, y_pred)),
 		"precision": float(precision_score(y_val, y_pred, zero_division=0)),
@@ -191,7 +196,8 @@ def train_models(
 ) -> Dict[str, Any]:
 	"""Entrena modelos de clasificación y retorna métricas/artefactos."""
 	df_proc = preprocess_dataset(df, leakage_columns=leakage_columns)
-	
+
+	# Usa la configuracion del plan para validar que el dataset procesado tiene las columnas necesarias antes de entrenar los modelos. Esto ayuda a detectar errores de configuración del plan o problemas en el dataset antes de llegar al entrenamiento.
 	_validate_dataset_columns(df_proc, 
 						   target_col=target_col, 
 						   required_columns=required_columns)
@@ -288,15 +294,16 @@ def train_models(
 	best_score = -float("inf")
 	best_name = None
 
+	# Entrena cada modelo, calcula métricas, guarda artefactos y determina el mejor modelo según la métrica primaria.
 	for name, pipeline in models.items():
 		pipeline.fit(X_train, y_train)
 		metrics = _score_model(pipeline, X_val, y_val)
-
+		# Guarda el modelo entrenado en disco para su uso posterior. Esto permite cargar el modelo directamente desde la ruta guardada sin necesidad de reentrenar, facilitando su despliegue o evaluación adicional.
 		model_path = MODELS_DIR / f"{name}.pkl"
 		joblib.dump(pipeline, model_path)
 
 		results["models"][name] = {"metrics": metrics, "path": str(model_path)}
-
+		# Determina el mejor modelo basado en la métrica primaria definida en la solicitud. Esto permite identificar rápidamente cuál modelo tuvo el mejor desempeño según la métrica de interés para el usuario.
 		score = metrics.get(primary_metric, 0.0)
 		if score > best_score:
 			best_score = score
@@ -304,6 +311,7 @@ def train_models(
 
 	results["models"].update(models_keras)
 
+	# Determinar el mejor modelo considerando también el modelo Keras si está disponible.
 	if TENSORFLOW_AVAILABLE and models_keras:
 		keras_auc = models_keras["NeuralNetwork"]["metrics"]["roc_auc"]
 		if keras_auc > best_score:
@@ -316,6 +324,8 @@ def train_models(
 				"note": "Modelo Keras - cargar con tensorflow.keras.models.load_model()",
 			}
 
+	# Guarda el mejor modelo (si no es el Keras) en una ruta común para facilitar su uso posterior. 
+	# El modelo Keras se deja en su formato original debido a sus requerimientos específicos de carga.
 	if best_name and best_name in results["models"] and best_name != "NeuralNetwork":
 		best_path = MODELS_DIR / "best_model.pkl"
 		joblib.dump(joblib.load(MODELS_DIR / f"{best_name}.pkl"), best_path)
@@ -324,14 +334,16 @@ def train_models(
 	if optimize_hyperparams and best_name and best_name != "NeuralNetwork":
 		best_model_path = MODELS_DIR / f"{best_name}.pkl"
 		best_pipeline = joblib.load(best_model_path)
-
+		# Solo se optimizan hiperparámetros para XGBoost en esta versión debido a su popularidad y capacidad de mejora significativa con tuning. 
+		# Se pueden agregar otros modelos en el futuro según demanda y recursos disponibles.
 		if best_name == "XGBoost":
 			param_grid = {
 				"model__n_estimators": [100, 200, 300],
 				"model__max_depth": [3, 6, 9],
 				"model__learning_rate": [0.01, 0.05, 0.1],
 			}
-
+			# Realiza búsqueda aleatoria de hiperparámetros con validación cruzada para encontrar la mejor configuración. 
+			# Esto permite mejorar el desempeño del modelo optimizando sus parámetros clave.
 			search = RandomizedSearchCV(
 				best_pipeline,
 				param_grid,
@@ -341,6 +353,9 @@ def train_models(
 				random_state=random_state,
 				n_jobs=-1,
 			)
+			# El ajuste se realiza sobre el conjunto de entrenamiento para evitar filtración de datos. 
+			# La validación cruzada ayuda a obtener una estimación más robusta del desempeño del modelo 
+			# con diferentes configuraciones de hiperparámetros.
 			search.fit(X_train, y_train)
 
 			best_optimized_path = MODELS_DIR / f"{best_name}_optimized.pkl"
@@ -364,6 +379,23 @@ def _load_train_models_function():
 	return train_models
 
 
+def _json_safe(value: Any) -> Any:
+	# Convierte objetos a formatos compatibles con JSON para almacenamiento en la base de datos.
+	if isinstance(value, dict):
+		return {key: _json_safe(item) for key, item in value.items()}
+
+	if isinstance(value, list):
+		return [_json_safe(item) for item in value]
+
+	if isinstance(value, tuple):
+		return [_json_safe(item) for item in value]
+
+	if isinstance(value, np.generic):
+		return value.item()
+
+	return value
+
+
 @router.post("/features/automl/train")
 def train_with_feature_plan(request: FeaturePlanAutoMLRequest, db=Depends(get_db_tasks)):
 	logger.info(
@@ -374,10 +406,13 @@ def train_with_feature_plan(request: FeaturePlanAutoMLRequest, db=Depends(get_db
 	)
 	manager = DatasetServicesManager(db)
 	try:
+		# valida que los directorios de almacenamiento existan antes de cualquier operación de lectura/escritura de archivos.
 		_ensure_storage_dirs()
+		# Cargar dataset desde la versión especificada para aplicar el plan y entrenar modelos.
 		version = _resolve_version(manager, request.dataset_id, request.version_id)
 		df = pd.read_csv(Path(version["storage_path"]))
 
+		# En esta version valida el error de pedir un plan_id que no exista o no corresponda a la version, en vez de entrenar con un plan vacio. Si no se envia un plan inline, se busca el ultimo plan guardado para esa version. Si no se encuentra ninguno, se lanza error.
 		if request.plan is not None:
 			plan = _normalize_plan(request.dataset_id, int(version["id"]), request.plan)
 			resolved_plan_id = None
@@ -389,11 +424,14 @@ def train_with_feature_plan(request: FeaturePlanAutoMLRequest, db=Depends(get_db
 			plan = FeaturePlanCreateRequest(**(parameters.get("plan") or {}))
 			resolved_plan_id = int(stored_plan_row["id"])
 
+		# Aplicar el plan al dataset en memoria para obtener el dataset de entrenamiento y el resumen de características.
 		train_df, summary = _apply_plan_in_memory(df, plan)
 
 		plan_required_columns = [plan.target_col, *summary.selected_features]
 		train_models = _load_train_models_function()
-		results = train_models(
+
+		# Entrenar modelos con el dataset procesado y obtener métricas/artefactos.
+		train_results = train_models(
 			train_df,
 			target_col=plan.target_col,
 			test_size=request.test_size,
@@ -404,12 +442,38 @@ def train_with_feature_plan(request: FeaturePlanAutoMLRequest, db=Depends(get_db
 			leakage_columns=summary.leakage_columns_present,
 		)
 
+		# Guardar registro de la operación en la base de datos para trazabilidad
+		train_payload = {
+			"dataset_id": request.dataset_id,
+			"version_id": int(version["id"]),
+			"plan_id": resolved_plan_id,
+			"request": {
+				"test_size": request.test_size,
+				"random_state": request.random_state,
+				"primary_metric": request.primary_metric,
+				"optimize_hyperparams": request.optimize_hyperparams,
+			},
+			"feature_summary": summary.dict(),
+			"train_results": _json_safe(train_results),
+		}
+
+		insert_record_Generic(
+			"dataset_operations",
+			{
+				"dataset_id": request.dataset_id,
+				"dataset_version_id": int(version["id"]),
+				"operation_name": AUTO_ML_OPERATION,
+				"parameters_json": Json(train_payload, dumps=lambda payload: json.dumps(payload, ensure_ascii=False, default=_json_safe)),
+			},
+			connection=db,
+		)
+
 		return {
 			"dataset_id": request.dataset_id,
 			"version_id": int(version["id"]),
 			"plan_id": resolved_plan_id,
 			"feature_summary": summary.dict(),
-			"train_results": results,
+			"train_results": train_results,
 		}
 	except ValueError as exc:
 		logger.warning("event=feature_automl_train_invalid detail=%s", str(exc))
