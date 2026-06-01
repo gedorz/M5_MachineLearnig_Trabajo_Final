@@ -12,6 +12,7 @@ import seaborn as sns
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from dataBaseManagement.dbConectionPostgres import get_db_tasks
+from .endpointCompararMetricas import build_comparar_metricas_result
 from .endpointsDatasets import DatasetServicesManager
 
 router = APIRouter()
@@ -536,3 +537,51 @@ def dataset_correlacion_variable_objetivo(dataset_id: int, version_id: int, db=D
 	df_reservas, version = _load_dataset_dataframe_or_404(manager, dataset_id, version_id)
 	figure = _create_correlation_heatmap_figure(df_reservas)
 	return _build_plot_response(dataset_id, version, figure)
+
+
+@router.get("/datasets-viewer/{dataset_id}/versions/{version_id}/comparar-metricas")
+def dataset_comparar_metricas(
+	dataset_id: int,
+	version_id: int,
+	primary_metric: str | None = None,
+	plan_id: int | None = None,
+	db=Depends(get_db_tasks),
+):
+	logger.info(
+		"event=datasets_viewer_comparar_metricas_start dataset_id=%s version_id=%s primary_metric=%s plan_id=%s",
+		dataset_id,
+		version_id,
+		primary_metric,
+		plan_id,
+	)
+	try:
+		return build_comparar_metricas_result(
+			db=db,
+			dataset_id=dataset_id,
+			version_id=version_id,
+			primary_metric=primary_metric,
+			plan_id=plan_id,
+		)
+	except ValueError as exc:
+		logger.warning(
+			"event=datasets_viewer_comparar_metricas_invalid dataset_id=%s version_id=%s detail=%s",
+			dataset_id,
+			version_id,
+			str(exc),
+		)
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+	except FileNotFoundError as exc:
+		logger.warning(
+			"event=datasets_viewer_comparar_metricas_not_found dataset_id=%s version_id=%s detail=%s",
+			dataset_id,
+			version_id,
+			str(exc),
+		)
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+	except Exception as exc:
+		logger.exception(
+			"event=datasets_viewer_comparar_metricas_error dataset_id=%s version_id=%s",
+			dataset_id,
+			version_id,
+		)
+		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
