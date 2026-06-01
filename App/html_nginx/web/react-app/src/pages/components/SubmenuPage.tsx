@@ -1,19 +1,19 @@
 import React from "react";
-import type { SubmenuPageContent } from "./submenuPageContent";
+import type { SubmenuPageContent } from "../submenuPageContent";
 
-type SubmenuPageProps = {
+type SubmenuPageInfoProps = {
   parentTitle: string;
   submenuTitle: string;
   description: string;
   content: SubmenuPageContent;
 };
 
-export default function SubmenuPage({
+export default function SubmenuPageInfo({
   parentTitle,
   submenuTitle,
   description,
   content
-}: SubmenuPageProps) {
+}: SubmenuPageInfoProps) {
   return (
     <section className="submenu-page" aria-labelledby="submenu-page-title">
       <div className="submenu-page-header">

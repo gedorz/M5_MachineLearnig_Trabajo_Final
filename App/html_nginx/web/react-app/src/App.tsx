@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import ImportarDatosPage from "./pages/importarDatos";
+import PrevisualizarLotePage from "./pages/Previsualizarlote";
 import ProcesamientoBalanceoPage from "./pages/procesamientoBalanceo";
+import SubmenuPageFeatures from "./pages/submenuPageFeatures";
+import SubmenuPageAutoML from "./pages/submenuPageAutoML";
+import SubmenuCompararMetricas from "./pages/submenuCompararMetricas";
 import { SubmenuPage, submenuPageContent } from "./pages";
 
 type SubmenuItem = {
@@ -270,8 +274,28 @@ export default function App() {
 
         {activeContext.submenu.id === "importar-csv-excel" ? (
           <ImportarDatosPage onDatasetLoaded={handleDatasetLoaded} />
+        ) : activeContext.submenu.id === "previsualizar-lote" ? (
+          <PrevisualizarLotePage
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
         ) : activeContext.submenu.id === "preprocesamiento-balanceo" ? (
           <ProcesamientoBalanceoPage
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "definir-features" ? (
+          <SubmenuPageFeatures
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "lanzar-automl" ? (
+          <SubmenuPageAutoML
+            activeDataset={activeDataset}
+            onDatasetVersionChange={handleDatasetVersionChange}
+          />
+        ) : activeContext.submenu.id === "comparar-metricas" ? (
+          <SubmenuCompararMetricas
             activeDataset={activeDataset}
             onDatasetVersionChange={handleDatasetVersionChange}
           />

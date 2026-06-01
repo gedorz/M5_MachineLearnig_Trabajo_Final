@@ -1,11 +1,5 @@
-import { useState } from "react";
-
-type DatasetContext = {
-	datasetId: number;
-	versionId: number;
-	versionNumber: number;
-	filename: string;
-};
+import React, { useState } from "react";
+import { type DatasetContext, useDatasetVersions } from "./hooks/useDatasetVersions";
 
 type NullSummaryResponse = {
 	dataset_id: number;
@@ -41,10 +35,23 @@ export default function ProcesamientoBalanceoPage({ activeDataset, onDatasetVers
 	const [nullSummary, setNullSummary] = useState<NullSummaryResponse | null>(null);
 	const [lowercaseResult, setLowercaseResult] = useState<LowercaseResponse | null>(null);
 
+	const {
+		versions,
+		selectedVersionId,
+		selectedVersion,
+		isLoadingVersions,
+		versionError,
+		setSelectedVersionId,
+		reloadVersions,
+	} = useDatasetVersions(activeDataset, onDatasetVersionChange);
+
 	const hasDataset = Boolean(activeDataset);
+    const hasSelectedVersion = Boolean(selectedVersionId);
+
+	const effectiveError = errorMessage || versionError;
 
 	const handleRun = async () => {
-		if (!activeDataset) {
+		if (!activeDataset || !selectedVersionId) {
 			setErrorMessage("Primero carga un dataset en Importar CSV/Excel.");
 			return;
 		}
@@ -56,7 +63,7 @@ export default function ProcesamientoBalanceoPage({ activeDataset, onDatasetVers
 
 		try {
 			const nullSummaryResponse = await fetch(
-				`/apim5/datasets/${activeDataset.datasetId}/versions/${activeDataset.versionId}/null-summary`
+				`/apim5/datasets/${activeDataset.datasetId}/versions/${selectedVersionId}/null-summary`
 			);
 			const nullSummaryPayload = (await nullSummaryResponse.json()) as NullSummaryResponse & { detail?: string };
 
@@ -67,7 +74,7 @@ export default function ProcesamientoBalanceoPage({ activeDataset, onDatasetVers
 			setNullSummary(nullSummaryPayload);
 
 			const lowercaseResponse = await fetch(
-				`/apim5/datasets/${activeDataset.datasetId}/versions/${activeDataset.versionId}/lowercase-columns`,
+				`/apim5/datasets/${activeDataset.datasetId}/versions/${selectedVersionId}/lowercase-columns`,
 				{ method: "POST" }
 			);
 			const lowercasePayload = (await lowercaseResponse.json()) as LowercaseResponse & { detail?: string };
@@ -82,6 +89,8 @@ export default function ProcesamientoBalanceoPage({ activeDataset, onDatasetVers
 				lowercasePayload.version.id,
 				lowercasePayload.version.version_number
 			);
+			await reloadVersions();
+			setSelectedVersionId(lowercasePayload.version.id);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Error desconocido al procesar el dataset.";
 			setErrorMessage(message);
@@ -104,18 +113,39 @@ export default function ProcesamientoBalanceoPage({ activeDataset, onDatasetVers
 				<div className="csv-upload-panel">
 					<div className="csv-upload-meta">
 						<p>
-							<strong>Dataset activo:</strong> {activeDataset ? `#${activeDataset.datasetId} v${activeDataset.versionNumber}` : "Ninguno"}
+							<strong>Dataset activo:</strong> {activeDataset ? `#${activeDataset.datasetId} (${activeDataset.filename})` : "Ninguno"}
 						</p>
 						<p>
 							<strong>Archivo:</strong> {activeDataset?.filename ?? "Sin archivo cargado"}
 						</p>
+						<label className="csv-file-picker">
+							<span>Versión del dataset</span>
+							<select
+								className="csv-version-select"
+								value={selectedVersionId ?? ""}
+								onChange={(event) => {
+									const nextVersionId = Number(event.target.value);
+									setSelectedVersionId(Number.isNaN(nextVersionId) ? null : nextVersionId);
+								}}
+								disabled={isLoadingVersions || versions.length === 0}
+							>
+								{versions.map((version) => (
+									<option key={version.id} value={version.id}>
+										v{version.version_number} - filas: {version.row_count ?? "?"}, columnas: {version.column_count ?? "?"}
+									</option>
+								))}
+							</select>
+						</label>
+						<p>
+							<strong>Versión seleccionada:</strong> {selectedVersion ? `v${selectedVersion.version_number}` : "Ninguna"}
+						</p>
 					</div>
 
-					<button type="button" className="csv-upload-button" onClick={handleRun} disabled={isRunning || !hasDataset}>
+					<button type="button" className="csv-upload-button" onClick={handleRun} disabled={isRunning || !hasDataset || !hasSelectedVersion}>
 						{isRunning ? "Procesando..." : "Ejecutar nulos + lowercase"}
 					</button>
 
-					{errorMessage && <div className="csv-alert csv-alert--error">{errorMessage}</div>}
+					{effectiveError && <div className="csv-alert csv-alert--error">{effectiveError}</div>}
 				</div>
 
 				<div className="csv-results">

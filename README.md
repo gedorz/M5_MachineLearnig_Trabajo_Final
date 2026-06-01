@@ -12,7 +12,6 @@
     - Se propone adjunto el dataset que se utilizará para llevar a cabo el proyecto.
     - Usar las funciones metodos y algoridmos planteadas en \notebooks\exploracion\TestPractica.ipynb
 
-
 # Requisitos mínimos del sistema.
 
 ## 1 Problema de clasificación binaria 
@@ -109,31 +108,40 @@ Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede
 | `reservation_status`             | Estado final de la reserva: Check-Out, Canceled, No-Show |
 | `reservation_status_date`        | Fecha en que se actualizó el estado                      |
 
-## 
-
-# 8 Proyecto Final ML
-
-Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ---
 
-## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning
+## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning planteado
+
+Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ```bash
 proyecto-final-ML/
 │
 ├── .gitignore                              # Archivos que no se suben al repo (e.g., modelos, datos temporales)
 │           
+├── .gitignore                             # Archivos que no se suben al repo (e.g., modelos, archivos de desarrollo)
 ├── APP/                                   # Datos usados en el proyecto
-│   ├── api-server/                          # Api de servicio para el proceso y entrenamiento de dato
-│   └── dockerFiles_m5/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
-│   └── html_nginx/                          # Pagina web para cargar los datos activar el reentrenamiento y
-│   │   └── web                              # mostrar los resultados de los modelos y predicciones. 
-│   │       └── feature_importance.html  
-│   │      
-├── data/                                   # Datos usados en el proyecto
-│   ├── raw/                                # Datos originales sin procesar
-│   └── processed/                          # Datos tras limpieza y transformación (listos para modelar)
+│   ├── api-server/                        # Api de servicio para el proceso y entrenamiento de dato
+│   ├── dockerFiles_m5/                    # Constructor de los servidores de Fastapi base de datos de postgres y web UI
+│   └── html_nginx/                        # Pagina web para cargar los datos activar el reentrenamiento y
+│       └── web                            # mostrar los resultados de los modelos y predicciones. 
+│           └──react-app
+│               └──index.html                 # entrada a toda la app
+│          
+├── data/                                  # Datos usados en el proyecto Volumen de Dockerfiles_m5_api_data_m5
+│    ├── Datasets 
+│    │   ├── raw/                           # Datos originales sin procesar del csv
+│    │   └── versions/                      # 
+│    │       └── Dataset_"#"                # Datos tras limpieza y transformación (listos para modelar)  en formato csv  
+│    └── models                             # modelos generados por train     
+│        ├── best_model.pkl
+│        ├── DecisionTree.pkl
+│        ├── LogisticRegression.pkl
+│        ├── NeuralNetwork.keras
+│        ├── RandomForest.pkl
+│        └── XGBoost.pkl
+│
 │           
 ├── docs/                                   # Documentación adicional
 │           
@@ -172,3 +180,195 @@ proyecto-final-ML/
 ├── requirements.txt                        # Dependencias del proyecto
 │           
 └── README.md                               # Documentación principal del proyecto con comandos de ejecución
+
+```
+## 9. Estructura principal del proyecto scr
+
+- `src/config.py` - rutas y configuración general de directorios.
+- `src/data_loader.py` - carga datos CSV y prepara el DataFrame.
+- `src/model_trainer.py` - entrena modelos: regresión logística, árbol de decisión, Random Forest, XGBoost y red neuronal Keras (opcional).
+- `src/evaluator.py` - evalúa modelos, calcula métricas, matriz de confusión y curvas ROC.
+- `src/predictor.py` - carga el mejor modelo guardado y genera predicciones.
+- `src/main.py` - orquesta el pipeline completo de ML (carga, entrenamiento, evaluación y predicción).
+- `App/api-server/api/endpoints/endpointsDatasets.py` - contiene los endpoints de la API: `/train`, `/predict` y `/evaluate`.
+- `requirements.txt` - dependencias del proyecto.
+
+
+## 10. Requisitos mínimos
+
+- Python 3.11+ recomendado.
+- Dependencias definidas en `requirements.txt`.
+- Dataset disponible en `data/raw/dataset_practica_final.csv`.
+
+## 11. Crear entorno virtual e instalar dependencias para ejecucion de scr localmente
+
+En Windows PowerShell:
+
+```powershell
+cd C:\Users\Documents\Repositorios\PontIA\MachineLearningTrabajoFinal
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+En Linux/Mac:
+
+```bash
+cd /ruta/al/proyecto
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## 5. Ejecutar el pipeline completo desde `src/main.py`
+
+```bash
+python src/main.py --data data/raw/dataset_practica_final.csv
+```
+
+Este script realiza:
+
+1. lectura del CSV,
+2. entrenamiento de los modelos,
+3. evaluación de los modelos entrenados,
+4. generación de reportes y gráficos en `src/models/evaluation_reports` o el directorio configurado,
+5. prueba rápida de predicción con el mejor modelo cargado.
+
+## 6. API REST disponible
+
+La API se expone desde el servidor FastAPI ubicado en `App/api-server/api/main.py`. ó http://localhost/apim5/docs#
+
+### Endpoints implementados del servidor API
+
+[Explicacion de endpoints del servidor API](App/README.md)
+
+## 7. Pipeline de modelos y validación
+
+Se entrenan al menos cinco modelos distintos:
+
+- `LogisticRegression`
+- `DecisionTree`
+- `RandomForest`
+- `XGBoost`
+- `NeuralNetwork` 
+
+La selección del mejor modelo se hace según la métrica principal `roc_auc` por defecto. El proyecto también calcula métricas adicionales como `accuracy`, `precision`, `recall` y `f1`.
+
+### Comparación de modelos con métricas comunes
+
+Los modelos se comparan utilizando un conjunto de métricas comunes en clasificación binaria:
+
+- Accuracy (Mide el porcentaje total de predicciones correctas.)  Mide el porcentaje total de predicciones correctas.
+- Precision (Precision del modelo)    De todos los casos que el modelo dijo que eran positivos, ¿cuántos realmente lo eran?
+- Recall  (Sensibilidad o Cobertura)  De todos los positivos reales, ¿cuántos encontró el modelo?
+- F1-score (Combina Precision y Recall en una sola métrica.)  Es la media armónica de ambas.
+- ROC-AUC (Receiver Operating Characteristic) La curva ROC muestra cómo cambia el rendimiento del modelo al modificar el umbral de clasificación.
+
+Estas métricas permiten evaluar no solo la exactitud, sino también el equilibrio entre falsos positivos y falsos negativos,
+que es clave en un problema de cancelación de reservas.
+
+La accuracy se incluye como referencia inicial, pero debido al desbalanceo inherente del problema (aproximadamente 70-80% de reservas no canceladas), la ROC-AUC se establece como métrica principal.
+
+### Justificación de la superioridad de un modelo
+
+Un modelo puede superar a otro por distintas razones. Por ejemplo, si `XGBoost` presenta un `ROC-AUC` más alto y una mejor `precision` frente a `RandomForest`, se puede justificar porque XGBoost maneja mejor las interacciones entre variables y el desbalance de clases. En cambio, si `LogisticRegression` tiene mayor `recall`, sería el preferido cuando la prioridad es detectar la mayor cantidad de cancelaciones posibles.
+
+### Tabla comparativa de resultados
+
+| Modelo              | Accuracy | F1-score | ROC-AUC |
+| ------------------- | -------- | -------- | ------- |
+| Logistic Regression | 0.88     | 0.85     | 0.91    |
+| Decision Tree       | 0.89     | 0.83     | 0.92    |
+| Random Forest       | 0.91     | 0.89     | 0.94    |
+| XGBoost             | 0.92     | 0.90     | 0.95    |
+| Neural Network      | 0.89     | 0.87     | 0.93    |
+
+## 8. Componentes de evaluación
+
+El evaluador genera:
+
+- matriz de confusión
+- curva ROC
+- comparación de métricas entre modelos
+- reporte JSON con resultados
+
+Se guardan gráficos y reportes en el directorio de salida configurado por `src/evaluator.py`.
+
+### Notas de implementación
+
+- El endpoint de predicción `/predict` admite entrada de un dataset ya almacenado en la base de datos o un conjunto de registros en JSON.
+- El módulo `src/predictor.py` carga el mejor modelo disponible o el modelo solicitado mediante `model_name`.
+
+## 9 Guía operativa de la subpágina: Definir features
+
+Objetivo de la subpágina Definir features:
+- Determinar las variables predictoras y la variable objetivo para entrenar modelos robustos.
+
+Checklist operativo de Definir features:
+- Excluir columnas con fuga de informacion.
+- Crear variables derivadas relevantes.
+- Documentar justificacion de cada feature.
+
+### 9.1 Paso a paso para definicion de una Matriz de Featues(caracteristicas de los dato) 
+
+1. Definir variable objetivo del problema (Cancelacion de las reservaciones)
+- Variable objetivo: `is_canceled` (0 no cancela, 1 cancela) .
+- Confirmar que todas las decisiones de features responden a este objetivo binario (Seleccion de la caracteristica con un check de usar o no usar).
+
+2. Construir listado inicial de variables candidatas
+- Incluir todas las columnas del dataset excepto la objetivo.
+- Separar por tipo: Numericas, categoricas, fecha/tiempo e identificadores.
+
+3. Excluir variables con fuga de informacion (data leakage)
+- Regla: excluir cualquier variable que se conozca despues del momento de prediccion.
+- Candidatas tipicas a revisar por fuga: `reservation_status`, `reservation_status_date` y variables operativas que cambian despues de la reserva.
+
+4. Diseñar features derivadas con sentido de negocio (No se desarrolla en esta version)
+- Proponer variables derivadas y su formula antes de entrenar modelos.
+- Ejemplos:
+    - `total_noches = stays_in_weekend_nights + stays_in_week_nights`
+    - `total_huespedes = adults + children + babies`
+    - `historial_cancelacion = previous_cancellations / (previous_cancellations + previous_bookings_not_canceled + 1)`
+    - `temporada_alta` derivada de `arrival_date_month`
+
+5. Definir transformaciones por tipo de variable
+- Numericas: imputacion de nulos, escalado si aplica.
+- Categoricas: codificacion (one-hot o equivalente), manejo de categorias raras.
+- Fechas: extraccion de componentes utiles (mes, semana, estacionalidad).
+
+6. Establecer criterios de inclusion/exclusion
+- Cobertura de datos (porcentaje de nulos aceptable).
+- Estabilidad temporal (que no dependa de informacion futura).
+- Utilidad de negocio (explicable para el dominio hotelero).
+- Utilidad tecnica (impacto esperado en F1 y ROC-AUC).
+
+7. Documentar decisiones feature por feature
+- Completar la matriz de justificacion y versionarla junto al experimento.
+- Dejar evidencia de por que una variable se usa, se transforma o se excluye.
+
+8. Definir salida de esta subpágina
+- Lista final de features aprobadas.
+- Lista de features excluidas por fuga o baja calidad.
+- Diccionario de transformaciones por feature.
+- Matriz de justificacion firmada para auditoria del experimento.
+
+### 9.2 Matriz de justificacion de features (plantilla de entrenamiento)
+
+| feature | tipo | usar (si/no) | motivo de negocio | motivo tecnico | riesgo de fuga (alto/medio/bajo) | transformacion | notas |
+|--------|------|--------------|-------------------|----------------|-----------------------------------|----------------|-------|
+| lead_time | numerica | si | Anticipacion de reserva | Predictor fuerte en cancelacion | bajo | escalar/imputar | validar outliers |
+| reservation_status | categorica | no | Estado final de la reserva | Introduce leakage directo | alto | excluir | se conoce al final |
+| reservation_status_date | fecha | no | Fecha de estado final | Variable posterior al evento | alto | excluir | no disponible al predecir |
+| country | categorica | si | Segmentacion geografica | puede requerir agrupacion | bajo | codificar/agrupar raras | revisar cardinalidad |
+| total_noches | derivada numerica | si | Duracion de estancia | mejora señal de comportamiento | bajo | crear + escalar | suma de noches |
+
+### 9.3 Criterio de cierre de la subpágina  Panel operativo de modelos - Configuración general del plan
+
+Se considera completada la subpágina Definir features cuando exista evidencia de:
+- Objetivo binario validado (`is_canceled`).
+- Variables con fuga identificadas y excluidas.
+- Features derivadas definidas con formula.
+- Matriz de justificacion completa para todas las features finales.
+- Entrega de lista final para la siguiente etapa de preprocesamiento y entrenamiento.

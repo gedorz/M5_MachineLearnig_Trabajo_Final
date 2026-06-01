@@ -285,6 +285,14 @@ h1 {
   background: #fff;
 }
 
+.csv-version-select {
+  width: 100%;
+  border: 1px solid rgba(10, 16, 32, 0.14);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
 .csv-upload-button {
   border: none;
   border-radius: 12px;
@@ -334,6 +342,25 @@ h1 {
   gap: 16px;
 }
 
+.csv-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.csv-tab-button {
+  border: 1px solid rgba(10, 16, 32, 0.12);
+  border-radius: 10px;
+  background: #f9fbff;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.csv-tab-button.is-active {
+  border-color: color-mix(in oklab, var(--blue) 70%, white 30%);
+  background: color-mix(in oklab, var(--blue) 10%, white 90%);
+}
+
 .csv-info-card {
   border: 1px solid rgba(10, 16, 32, 0.08);
   border-radius: 14px;
@@ -343,6 +370,25 @@ h1 {
 
 .csv-info-card h3 {
   margin: 0 0 10px;
+}
+
+.csv-loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.csv-loading-state p {
+  margin: 0;
+}
+
+.csv-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 94, 255, 0.2);
+  border-top-color: var(--blue);
+  animation: csv-spin 0.9s linear infinite;
 }
 
 .csv-columns-list {
@@ -427,6 +473,13 @@ h1 {
   color: rgba(10, 16, 32, 0.85);
 }
 
+.csv-plot-image {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 16, 32, 0.1);
+}
+
 .csv-empty-state {
   border: 1px dashed rgba(10, 16, 32, 0.16);
   border-radius: 16px;
@@ -441,6 +494,85 @@ h1 {
 .csv-empty-state p {
   margin: 0;
   color: rgba(10, 16, 32, 0.76);
+}
+
+.feature-plan-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.feature-plan-kpis {
+  border: 1px solid rgba(10, 16, 32, 0.08);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+}
+
+.feature-plan-kpis p {
+  margin: 0 0 6px;
+}
+
+.feature-matrix-table {
+  min-width: 1100px;
+}
+
+.feature-justification-input {
+  width: 100%;
+  min-width: 240px;
+  border: 1px solid rgba(10, 16, 32, 0.14);
+  border-radius: 8px;
+  padding: 7px 8px;
+}
+
+.feature-derived-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.feature-derived-item {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 2fr 2fr auto;
+}
+
+.feature-derived-item input {
+  border: 1px solid rgba(10, 16, 32, 0.14);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.feature-notes-textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid rgba(10, 16, 32, 0.14);
+  border-radius: 10px;
+  padding: 10px;
+  resize: vertical;
+  font-family: "Outfit", sans-serif;
+}
+
+.feature-actions-card {
+  display: grid;
+  gap: 10px;
+}
+
+.feature-actions-card p {
+  margin: 0;
+}
+
+.feature-inline-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .feature-derived-item {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes rise {
@@ -458,6 +590,12 @@ h1 {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes csv-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
