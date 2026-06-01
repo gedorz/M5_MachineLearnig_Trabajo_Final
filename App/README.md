@@ -92,21 +92,41 @@ La API estará disponible en `http://localhost:80` ó `http://localhost/apim5`
 Para ejecutar la aplicación, accede a:
 - Swagger UI: `http://localhost/apim5/docs#/`
 
+### Ejemplo de uso de `/train`
+
+```bash
+curl -X POST http://localhost/train \
+  -H "Content-Type: application/json" \
+  -d '{
+        "dataset_id": 1,
+        "version_id": 1,
+        "test_size": 0.2,
+        "random_state": 42,
+        "primary_metric": "roc_auc"
+    }'
+```
+
+### Ejemplo de uso de `/evaluate`
+
+```bash
+curl -X POST http://localhost/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_id": 1,
+    "version_id": 1,
+    "model_name": "",
+    "test_size": 0.2,
+    "random_state": 42,
+    "primary_metric": "roc_auc"
+  }'
+```
 
 ### Ejemplo de uso de `/predict`
 
 ```bash
-curl -X POST http://localhost:8000/predict \
+curl -X POST http://localhost/predict \
   -H "Content-Type: application/json" \
   -d '{"dataset_id": 1, "limit": 10}'
-```
-
-También se puede usar:
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"records": [{"hotel":"Resort","lead_time":15,...}], "model_name":"best_model"}'
 ```
 
 ## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning
