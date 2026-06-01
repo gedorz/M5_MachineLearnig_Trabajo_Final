@@ -112,7 +112,7 @@ def _create_outliers_boxplots_figure(df_reservas: pd.DataFrame, columns: list[st
 			axis.set_title(f"Boxplot de {column_name_formatted}")
 			axis.set_axis_off()
 			continue
-
+		# Se hace un ajuste personalizado Para ajustar el rango del boxplot y evitar que los extremos oculten la grafica.	
 		q01 = series.quantile(0.01)
 		q99 = series.quantile(0.99)
 		if pd.notna(q01) and pd.notna(q99) and q01 < q99:
@@ -149,7 +149,7 @@ def _prepare_pairplot_dataframe(df_reservas):
 			detail="No hay columnas numéricas disponibles para generar el pairplot.",
 		)
 
-	max_columns = 6
+	max_columns = 6  # Limitar a 6 columnas para evitar sobrecarga en el pairplot (incluyendo la variable objetivo)
 	if "adr" in numeric_df.columns:
 		selected_columns = ["adr", *[col for col in numeric_df.columns if col != "adr"][: max_columns - 1]]
 	else:

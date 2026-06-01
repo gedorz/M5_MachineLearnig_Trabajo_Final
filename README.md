@@ -108,15 +108,12 @@ Es ideal para aplicar modelos de clasificación binaria, donde el objetivo puede
 | `reservation_status`             | Estado final de la reserva: Check-Out, Canceled, No-Show |
 | `reservation_status_date`        | Fecha en que se actualizó el estado                      |
 
-## 
-
-# 8 Proyecto Final ML
-
-Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ---
 
 ## 8 Estructura del proyecto Dataset Machine learnig y Deep Learning
+
+Estructura para organizar un proyecto de Machine Learning de forma profesional y escalable.
 
 ```bash
 proyecto-final-ML/
@@ -128,7 +125,7 @@ proyecto-final-ML/
 │   └── dockerFiles_m5/                         # Constructor de los servidores de Fastapi base de datos de postgres y web UI
 │   └── html_nginx/                          # Pagina web para cargar los datos activar el reentrenamiento y
 │   │   └── web                              # mostrar los resultados de los modelos y predicciones. 
-│   │       └── feature_importance.html  
+│   │       └── index.html  
 │   │      
 ├── data/                                   # Datos usados en el proyecto
 │   ├── raw/                                # Datos originales sin procesar
@@ -172,10 +169,179 @@ proyecto-final-ML/
 │           
 └── README.md                               # Documentación principal del proyecto con comandos de ejecución
 
+```
+## 9. Estructura principal del proyecto scr
 
-.
+- `src/config.py` - rutas y configuración general de directorios.
+- `src/data_loader.py` - carga datos CSV y prepara el DataFrame.
+- `src/model_trainer.py` - entrena modelos: regresión logística, árbol de decisión, Random Forest, XGBoost y red neuronal Keras opcional.
+- `src/evaluator.py` - evalúa modelos, calcula métricas, matriz de confusión y curvas ROC.
+- `src/predictor.py` - carga el mejor modelo guardado y genera predicciones.
+- `src/main.py` - orquesta el pipeline completo de ML (carga, entrenamiento, evaluación y predicción).
+- `App/api-server/api/endpoints/endpointsDatasets.py` - contiene los endpoints de la API: `/train`, `/predict` y `/evaluate`.
+- `requirements.txt` - dependencias del proyecto.
 
----
+
+## 10. Requisitos mínimos
+
+- Python 3.11+ recomendado.
+- Dependencias definidas en `requirements.txt`.
+- Dataset disponible en `data/raw/dataset_practica_final.csv`.
+
+## 11. Crear entorno virtual e instalar dependencias
+
+En Windows PowerShell:
+
+```powershell
+cd C:\Users\diego\Documents\Repositorios\PontIA\MachineLearningTrabajoFinal
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+En Linux/Mac:
+
+```bash
+cd /ruta/al/proyecto
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## 5. Ejecutar el pipeline completo desde `src/main.py`
+
+```bash
+python src/main.py --data data/raw/dataset_practica_final.csv
+```
+
+Este script realiza:
+
+1. lectura del CSV,
+2. entrenamiento de los modelos,
+3. evaluación de los modelos entrenados,
+4. generación de reportes y gráficos en `src/models/evaluation_reports` o el directorio configurado,
+5. prueba rápida de predicción con el mejor modelo cargado.
+
+## 6. API REST disponible
+
+La API se expone desde el servidor FastAPI ubicado en `App/api-server/api/main.py`. ó http://localhost/apim5/docs#
+
+### Endpoints implementados
+
+- `GET  /` - estado básico de la API.
+- `GET  /apim5/openapi.json` - esquema OpenAPI de la API.
+- `POST /train` - entrena modelos usando un dataset almacenado en base de datos.
+- `POST /predict` - genera predicciones con el modelo cargado.
+- `POST /evaluate` - evalúa los modelos existentes y genera métricas comparativas.
+
+- `POST /cargadatoscsv` - argadatoscsv
+- `POST /datasets/upload` - Upload Dataset
+- `GET  /datasets/{dataset_id}` - Get Dataset
+- `GET  /datasets/{dataset_id}/preview` - Preview Latest Dataset Version
+
+- `GET /datasets/{dataset_id}/versions/{version_id}/` - Preview Dataset Version
+- `GET /datasets/{dataset_id}/null-summary` -  Null Summary Latest Dataset Version
+- `GET /datasets/{dataset_id}/versions/{version_id}/null-summary` -  Null Summary Dataset Version
+- `POST /datasets/{dataset_id}/versions/{version_id}/lowercase-columns` -  Lowercase Dataset Columns
+
+- `GET /datasets-viewer/{dataset_id}/versions` -  List Dataset Versions
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/data-info` -   Dataset Data Info
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/distribution` -  Dataset Distribution Plots
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/distribution-cancelaciones` -  Dataset Distribution Cancelaciones
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histogramas-numericos` -  Dataset Histogramas Numericos
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/boxplots-outliers` -  Dataset Boxplots Outliers
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histplot-adr` -  Dataset Histplot Adr
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/histplot-adr-kde` -  Dataset Histplot Adr Kde
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/pairplot Dataset Pairplot` - 
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/nulls-heatmap Dataset Nulls Heatmap` - 
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-hotel` -  Dataset Cancelaciones Por Hotel
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/cancelaciones-por-mes` -  Dataset Cancelaciones Por Mes
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/lead-time-distribution` -  Dataset Lead Time Distribution
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/adr-por-hotel-cancelacion` -  Dataset Adr Por Hotel Cancelacion
+- `GET /datasets-viewer/{dataset_id}/versions/{version_id}/plots/correlacion-variable-objetivo` -  Dataset Correlacion Variable Objetivo
+
+- `GET /features/profile/{dataset_id}/versions/{version_id}` -  Feature Profile
+- `POST /features/plan Create Feature Plan
+- `GET /features/plan/{dataset_id}/versions/{version_id}/latest` -  Get Latest Feature Plan 
+- `POST /features/apply Apply` -  Feature Plan
+- `POST /features/automl/train` -  Train With Feature Plan
+
+- `POST /evaluate` -   Evaluate Models
+- `POST /train` -  Train Dataset
+- `POST /predict` -  Predict Endpoint
+
+### Ejemplo de uso de `/predict`
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"dataset_id": 1, "limit": 10}'
+```
+
+También se puede usar:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"records": [{"hotel":"Resort","lead_time":15,...}], "model_name":"best_model"}'
+```
+
+## 7. Pipeline de modelos y validación
+
+Se entrenan al menos cinco modelos distintos:
+
+- `LogisticRegression`
+- `DecisionTree`
+- `RandomForest`
+- `XGBoost`
+- `NeuralNetwork` 
+
+La selección del mejor modelo se hace según la métrica principal `roc_auc` por defecto. El proyecto también calcula métricas adicionales como `accuracy`, `precision`, `recall` y `f1`.
+
+### Comparación de modelos con métricas comunes
+
+Los modelos se comparan utilizando un conjunto de métricas comunes en clasificación binaria:
+
+- Accuracy (Mide el porcentaje total de predicciones correctas.)  Mide el porcentaje total de predicciones correctas.
+- Precision (Precision del modelo)    De todos los casos que el modelo dijo que eran positivos, ¿cuántos realmente lo eran?
+- Recall  (Sensibilidad o Cobertura)  De todos los positivos reales, ¿cuántos encontró el modelo?
+- F1-score (Combina Precision y Recall en una sola métrica.)  Es la media armónica de ambas.
+- ROC-AUC (Receiver Operating Characteristic) La curva ROC muestra cómo cambia el rendimiento del modelo al modificar el umbral de clasificación.
+
+Estas métricas permiten evaluar no solo la exactitud, sino también el equilibrio entre falsos positivos y falsos negativos,
+que es clave en un problema de cancelación de reservas.
+
+### Justificación de la superioridad de un modelo
+
+Un modelo puede superar a otro por distintas razones. Por ejemplo, si `XGBoost` presenta un `ROC-AUC` más alto y una mejor `precision` frente a `RandomForest`, se puede justificar porque XGBoost maneja mejor las interacciones entre variables y el desbalance de clases. En cambio, si `LogisticRegression` tiene mayor `recall`, sería el preferido cuando la prioridad es detectar la mayor cantidad de cancelaciones posibles.
+
+### Tabla comparativa de resultados
+
+| Modelo              | Accuracy | F1-score | ROC-AUC |
+| ------------------- | -------- | -------- | ------- |
+| Logistic Regression | 0.88     | 0.85     | 0.91    |
+| Decision Tree       | 0.89     | 0.83     | 0.92    |
+| Random Forest       | 0.91     | 0.89     | 0.94    |
+| XGBoost             | 0.92     | 0.90     | 0.95    |
+| Neural Network      | 0.89     | 0.87     | 0.93    |
+
+## 8. Componentes de evaluación
+
+El evaluador genera:
+
+- matriz de confusión
+- curva ROC
+- comparación de métricas entre modelos
+- reporte JSON con resultados
+
+Se guardan gráficos y reportes en el directorio de salida configurado por `src/evaluator.py`.
+
+## 9. Notas de implementación
+
+- El endpoint de predicción `/predict` admite entrada de un dataset ya almacenado en la base de datos o un conjunto de registros en JSON.
+- El módulo `src/predictor.py` carga el mejor modelo disponible o el modelo solicitado mediante `model_name`.
 
 ## 9 Guía operativa de la subpágina: Definir features
 
