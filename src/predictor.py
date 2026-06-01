@@ -78,7 +78,6 @@ def _find_sklearn_preprocessor() -> Optional[Any]:
 
 def predict_from_dataframe(df: pd.DataFrame, model: Any, model_type: str) -> List[Dict[str, Any]]:
     """Recibe un DataFrame (features únicamente) y devuelve lista de predicciones.
-
     Cada elemento: {"prediction": int, "probability": float | None}
     """
     if model_type == "sklearn":

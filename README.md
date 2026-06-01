@@ -269,6 +269,8 @@ Los modelos se comparan utilizando un conjunto de métricas comunes en clasifica
 Estas métricas permiten evaluar no solo la exactitud, sino también el equilibrio entre falsos positivos y falsos negativos,
 que es clave en un problema de cancelación de reservas.
 
+La accuracy se incluye como referencia inicial, pero debido al desbalanceo inherente del problema (aproximadamente 70-80% de reservas no canceladas), la ROC-AUC se establece como métrica principal.
+
 ### Justificación de la superioridad de un modelo
 
 Un modelo puede superar a otro por distintas razones. Por ejemplo, si `XGBoost` presenta un `ROC-AUC` más alto y una mejor `precision` frente a `RandomForest`, se puede justificar porque XGBoost maneja mejor las interacciones entre variables y el desbalance de clases. En cambio, si `LogisticRegression` tiene mayor `recall`, sería el preferido cuando la prioridad es detectar la mayor cantidad de cancelaciones posibles.
